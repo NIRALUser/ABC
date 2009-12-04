@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <executable>
   <category>Segmentation</category>
-  <title>Utah Atlas Based Segmentation</title>
+  <title>ABC: Atlas Based Classification</title>
   <description>
-  Utah atlas based segmentation pipeline.
+  Utah-UNC atlas based segmentation pipeline.
   Generates output images after bias correction and co-registration along
   with segmentation label image.
   </description>
   <version>2.0a</version>
   <contributor>Marcel Prastawa</contributor>
   <documentation-url></documentation-url>
-  <license>Slicer</license>
+  <license>3D Slicer</license>
   <acknowledgements></acknowledgements>
  
   <parameters>
@@ -46,6 +46,14 @@
       <longflag>--inputImage4</longflag>
       <description>Input 4</description>
       <label>Input image 4</label>
+      <channel>input</channel>
+    </image>
+
+    <image>
+      <name>inputImage5</name>
+      <longflag>--inputImage5</longflag>
+      <description>Input 5</description>
+      <label>Input image 5</label>
       <channel>input</channel>
     </image>
 
@@ -113,6 +121,14 @@
       <longflag>--outputImage4</longflag>
       <description>Output 4</description>
       <label>Bias corrected output image 4</label>
+      <channel>output</channel>
+    </image>
+
+    <image>
+      <name>outputImage5</name>
+      <longflag>--outputImage5</longflag>
+      <description>Output 5</description>
+      <label>Bias corrected output image 5</label>
       <channel>output</channel>
     </image>
 

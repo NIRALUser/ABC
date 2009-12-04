@@ -1,9 +1,9 @@
 
 
 // Atlas based segmentation
-// UtahAtlasBasedSegmentation outdir --inputImage1 img1 ... atlasdir --atlasOrient RAI -b 4 --warpPoints 5,5,5
+// ABC outdir --inputImage1 img1 ... atlasdir --atlasOrient RAI -b 4 --warpPoints 5,5,5
 
-#include "UtahAtlasBasedSegmentationCLP.h"
+#include "ABCCLP.h"
 
 #include "mu.h"
 #include "muFile.h"
@@ -35,7 +35,7 @@
 
 typedef std::vector<std::string> StringList;
 
-int run_Utah_register_segment(int argc, char** argv)
+int run_ABC(int argc, char** argv)
 {
 
   PARSE_ARGS;
@@ -54,7 +54,7 @@ int run_Utah_register_segment(int argc, char** argv)
     atlasDir += "/";
 
   // Set up suffix string for images
-  std::string suffstr = "_Utah_seg.mha";
+  std::string suffstr = "_seg.mha";
 
   std::cout << "Reading input images: " << std::endl;
 
@@ -67,16 +67,8 @@ int run_Utah_register_segment(int argc, char** argv)
     inputFiles.Append(inputImage3);
   if (inputImage4.size() != 0)
     inputFiles.Append(inputImage4);
-
-  DynArray<std::string> inputImages;
-  if (inputImage1.size() != 0)
-    inputImages.Append(inputImage1);
-  if (inputImage2.size() != 0)
-    inputImages.Append(inputImage2);
-  if (inputImage3.size() != 0)
-    inputImages.Append(inputImage3);
-  if (inputImage4.size() != 0)
-    inputImages.Append(inputImage4);
+  if (inputImage5.size() != 0)
+    inputFiles.Append(inputImage5);
 
   DynArray<std::string> inputOrients;
 /*
@@ -116,7 +108,7 @@ int run_Utah_register_segment(int argc, char** argv)
 
     atlasreg->SetAtlasOrientation(atlasOrient);
 
-    atlasreg->SetImageFileNames(inputImages);
+    atlasreg->SetImageFileNames(inputFiles);
     atlasreg->SetImageOrientations(inputOrients);
     // NOTE: trafo write should be disabled for Slicer
     atlasreg->SetOutputDirectory(std::string(""));
@@ -276,7 +268,7 @@ main(int argc, char** argv)
 
   try
   {
-    run_Utah_register_segment(argc, argv);
+    run_ABC(argc, argv);
   }
   catch (itk::ExceptionObject& e)
   {
