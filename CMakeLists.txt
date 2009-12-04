@@ -1,0 +1,4 @@
+SUBDIRS(
+  Slicer3CommandLine
+)
+

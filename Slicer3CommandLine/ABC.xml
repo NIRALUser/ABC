@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8"?>
+<executable>
+  <category>Segmentation</category>
+  <title>Utah Atlas Based Segmentation</title>
+  <description>
+  Utah atlas based segmentation pipeline.
+  Generates output images after bias correction and co-registration along
+  with segmentation label image.
+  </description>
+  <version>2.0a</version>
+  <contributor>Marcel Prastawa</contributor>
+  <documentation-url></documentation-url>
+  <license>Slicer</license>
+  <acknowledgements></acknowledgements>
+ 
+  <parameters>
+    <label>Input images and orientations</label>
+    <description>Input image and orientations</description>
+
+    <image>
+      <name>inputImage1</name>
+      <longflag>--inputImage1</longflag>
+      <description>Input 1</description>
+      <label>Input image 1</label>
+      <channel>input</channel>
+    </image>
+
+    <image>
+      <name>inputImage2</name>
+      <longflag>--inputImage2</longflag>
+      <description>Input 2</description>
+      <label>Input image 2</label>
+      <channel>input</channel>
+    </image>
+
+    <image>
+      <name>inputImage3</name>
+      <longflag>--inputImage3</longflag>
+      <description>Input 3</description>
+      <label>Input image 3</label>
+      <channel>input</channel>
+    </image>
+
+    <image>
+      <name>inputImage4</name>
+      <longflag>--inputImage4</longflag>
+      <description>Input 4</description>
+      <label>Input image 4</label>
+      <channel>input</channel>
+    </image>
+
+  </parameters>
+
+  <parameters>
+    <label>Atlas</label>
+    <description>Atlas</description>
+
+    <directory>
+    <name>atlasDir</name>
+    <label>Atlas Directory</label>
+    <flag>a</flag>
+    <longflag>--atlasDir</longflag>
+    <channel>input</channel>
+    </directory>
+
+    <string>
+    <name>atlasOrient</name>
+    <label>Atlas Orientation</label>
+    <flag>u</flag>
+    <longflag>--atlasOrient</longflag>
+    </string>
+
+  </parameters>
+
+  <parameters>
+    <label>Output images</label>
+    <description>Output images</description>
+
+    <image>
+      <name>labelImage</name>
+      <longflag>--outputLabel</longflag>
+      <description>Output label image</description>
+      <label>Output label image</label>
+      <channel>output</channel>
+    </image>
+
+    <image>
+      <name>outputImage1</name>
+      <longflag>--outputImage1</longflag>
+      <description>Output 1</description>
+      <label>Bias corrected output image 1</label>
+      <channel>output</channel>
+    </image>
+
+    <image>
+      <name>outputImage2</name>
+      <longflag>--outputImage2</longflag>
+      <description>Output 2</description>
+      <label>Bias corrected output image 2</label>
+      <channel>output</channel>
+    </image>
+
+    <image>
+      <name>outputImage3</name>
+      <longflag>--outputImage3</longflag>
+      <description>Output 3</description>
+      <label>Bias corrected output image 3</label>
+      <channel>output</channel>
+    </image>
+
+    <image>
+      <name>outputImage4</name>
+      <longflag>--outputImage4</longflag>
+      <description>Output 4</description>
+      <label>Bias corrected output image 4</label>
+      <channel>output</channel>
+    </image>
+
+  </parameters>
+
+  <parameters advanced="true">
+    <label>Segmentation Parameters</label>
+    <description>Advanced parameters for segmentation</description>
+
+    <integer>
+    <name>biasDegree</name>
+    <flag>b</flag>
+    <longflag>--biasDegree</longflag>
+    <label>Bias Field Polynomial Degree</label>
+    <default>4</default>
+    </integer>
+
+    <integer-vector>
+    <name>warpPoints</name>
+    <label>Warp Control Points</label>
+    <flag>w</flag>
+    <longflag>--warpPoints</longflag>
+    <default>5,5,5</default>
+    </integer-vector>
+  </parameters>
+
+</executable>
