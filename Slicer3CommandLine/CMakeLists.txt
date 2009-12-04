@@ -55,22 +55,15 @@ SET (CLP ABC)
 SET ( ${CLP}_SOURCE ${CLP}.cxx)
 GENERATECLP(${CLP}_SOURCE ${CLP}.xml)
 ADD_EXECUTABLE(${CLP} ${${CLP}_SOURCE} ${ABC_SRCS})
-slicer3_set_plugins_output_path(${CLP})
 TARGET_LINK_LIBRARIES (${CLP}
   ${ITK_LIBRARIES}
 )
 
-###
-
-IF (Slicer3_SOURCE_DIR)
-  # install each target in the production area (where it would appear in an
-  # installation) and install each target in the developer area (for running
-  # from a build)
-  SET(TARGETS
-    ABC
-  )
-
-  slicer3_install_plugins(${TARGETS})
-
-ENDIF (Slicer3_SOURCE_DIR)
-
+#
+# Install into a local plugins directory
+#
+set(TARGETS ABC)
+foreach(targ ${TARGETS})
+  slicer3_set_plugins_output_path(${targ})
+endforeach(targ ${TARGETS})
+slicer3_install_plugins(${TARGETS})
