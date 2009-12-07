@@ -1,18 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <executable>
   <category>Segmentation</category>
-  <title>ABC: Atlas Based Classification</title>
+  <title>ABC (Atlas Based Classification)</title>
   <description>
-  Utah-UNC atlas based segmentation pipeline.
-  Generates output images after bias correction and co-registration along
-  with segmentation label image.
+Utah-UNC atlas based segmentation pipeline. Generates output images after bias correction and co-registration along with segmentation label image.
   </description>
   <version>2.0a</version>
   <contributor>Marcel Prastawa</contributor>
   <documentation-url></documentation-url>
   <license>3D Slicer</license>
   <acknowledgements>
-    This work is part of the National Alliance for Medical Image Computing (NAMIC), funded by the National Institutes of Health through the NIH Roadmap for Medical Research, Grant U54 EB005149.
+This work is part of the National Alliance for Medical Image Computing (NAMIC), funded by the National Institutes of Health through the NIH Roadmap for Medical Research, Grant U54 EB005149.
   </acknowledgements>
  
   <parameters>
