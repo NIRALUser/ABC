@@ -11,7 +11,9 @@
   <contributor>Marcel Prastawa</contributor>
   <documentation-url></documentation-url>
   <license>3D Slicer</license>
-  <acknowledgements></acknowledgements>
+  <acknowledgements>
+    This work is part of the National Alliance for Medical Image Computing (NAMIC), funded by the National Institutes of Health through the NIH Roadmap for Medical Research, Grant U54 EB005149.
+  </acknowledgements>
  
   <parameters>
     <label>Input images and orientations</label>
@@ -84,7 +86,7 @@
     <label>Output images</label>
     <description>Output images</description>
 
-    <image>
+    <image type="label">
       <name>labelImage</name>
       <longflag>--outputLabel</longflag>
       <description>Output label image</description>
