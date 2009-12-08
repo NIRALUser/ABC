@@ -1,0 +1,624 @@
+# data file for the Fltk User Interface Designer (fluid)
+version 1.0106 
+header_name {.h} 
+code_name {.cxx}
+decl {\#include "Fl/Fl_File_Chooser.h"} {} 
+
+decl {\#include "itkExceptionObject.h"} {} 
+
+decl {\#include "EMSParameters.h"} {public
+} 
+
+decl {\#include "EMSParametersXMLFile.h"} {public
+} 
+
+decl {\#include "runEMS.h"} {} 
+
+decl {\#include <iostream>} {} 
+
+decl {\#include <sstream>} {} 
+
+decl {\#include <string>} {} 
+
+decl {\#include <stdlib.h>} {} 
+
+class GUI {open
+} {
+  Function {MakeWindow()} {open
+  } {
+    Fl_Window aboutwindow {
+      label {ABC: About}
+      xywh {318 101 612 668} type Double hide
+    } {
+      Fl_Box {} {
+        label {
+ABC (Atlas Based Classification) GUI v1.0
+Normal brain segmentation from MRI
+
+Marcel Prastawa
+prastawa@@sci.utah.edu
+http://www.sci.utah.edu/~prastawa
+
+This software is provided for research purposes only
+
+Implemented using FLTK and ITK
+http://www.fltk.org
+http://www.itk.org
+
+Based on the following papers:
+
+Maes, F., Collignon, A., Vandermeulen, D., Marchal, G., Suetens, P. 
+Multimodality image registration by maximization of mutual information.
+IEEE TMI 1997; 16(2):187-198
+
+Van Leemput K, Maes F, Vandermeulen D, Suetens P. Automated model based
+tissue classification of MR images of the brain. IEEE TMI 1999; 18:897-908
+
+Van Leemput K, Maes F, Vandermeulen D, Suetens P. Automated model based
+bias field correction of MR images of the brain. IEEE TMI 1999; 18:885-896
+}
+        xywh {5 5 600 600} box FLAT_BOX color 26 align 21
+      }
+      Fl_Button {} {
+        label Close
+        callback {aboutwindow->hide();}
+        xywh {270 620 80 30}
+      }
+    }
+    Fl_Window orientwindow {
+      label {Image Orientation} open
+      xywh {441 213 285 110} type Double hide
+    } {
+      Fl_Input orientInput {
+        label {Orientation:}
+        xywh {95 20 180 30}
+      }
+      Fl_Return_Button {} {
+        label OK
+        callback {int pos = imageBrowser->value();
+
+imageOrientBrowser->text(pos, orientInput->value());
+
+orientwindow->hide();
+orientwindow->set_non_modal();}
+        xywh {175 65 100 30}
+      }
+    }
+    Fl_Window runwindow {
+      label {ABC: Running...} open
+      xywh {464 310 361 246} type Double hide
+    } {
+      Fl_Box {} {
+        label {Segmentation in progress, please wait...}
+        xywh {25 25 300 200} box FLAT_BOX color 247
+      }
+    }
+    Fl_Window mainwindow {
+      label {ABC}
+      xywh {309 66 600 538} type Double visible
+    } {
+      Fl_Tabs {} {
+        xywh {0 35 620 500} box UP_BOX
+      } {
+        Fl_Group tab1 {
+          label {Step 1} open
+          xywh {10 65 595 450} align 129
+        } {
+          Fl_Button {} {
+            label Next
+            callback {tab1->hide();
+tab3->hide();
+tab4->hide();
+
+tab2->show();}
+            xywh {500 480 80 30}
+          }
+          Fl_Input suffixInput {
+            label Suffix
+            xywh {64 110 300 30}
+          }
+          Fl_Output atlasdirOutput {
+            label {Atlas Directory:}
+            xywh {127 203 365 30} color 47
+          }
+          Fl_Box {} {
+            label {String used to tag all output files (e.g. case1)}
+            xywh {25 74 580 30} box FLAT_BOX color 175 align 20
+          }
+          Fl_Box {} {
+            label {Where we can find the spatial priors and template}
+            xywh {25 164 580 30} box FLAT_BOX color 175 align 20
+          }
+          Fl_Box {} {
+            label {Global class priors}
+            xywh {25 319 580 30} box FLAT_BOX color 175 align 20
+          }
+          Fl_Input prior1Input {
+            label WM
+            xywh {55 354 40 30}
+          }
+          Fl_Input prior2Input {
+            label GM
+            xywh {130 354 40 30}
+          }
+          Fl_Input prior3Input {
+            label CSF
+            xywh {210 354 40 30}
+          }
+          Fl_Input prior4Input {
+            label Other
+            xywh {300 354 40 30}
+          }
+          Fl_Button {} {
+            label Change
+            callback {char* dir = fl_dir_chooser("Select atlas directory", NULL, 0);
+if (dir == NULL)
+  return;
+atlasdirOutput->value(dir);}
+            xywh {500 203 80 30}
+          }
+          Fl_Box {} {
+            label {Orientation of atlas images, permutations of R/L, A/P, I/S (e.g. RAI, ASR)}
+            xywh {25 243 580 30} box FLAT_BOX color 175 align 20
+          }
+          Fl_Input atlasOrientInput {
+            label {Atlas Orientation}
+            xywh {135 278 300 30}
+          }
+          Fl_Check_Button warpAtlasButton {
+            label {Warp atlas to subject}
+            xywh {25 431 25 25} down_box DOWN_BOX
+          }
+          Fl_Box {} {
+            label {Deformable registration of atlas to subject}
+            xywh {25 393 580 30} box FLAT_BOX color 175 align 20
+          }
+          Fl_Input warpInput_nx {
+            label {Grid size:}
+            xywh {261 429 40 30}
+          }
+          Fl_Input warpInput_ny {
+            label X
+            xywh {320 429 40 30}
+          }
+          Fl_Input warpInput_nz {
+            label X
+            xywh {376 430 40 30}
+          }
+        }
+        Fl_Group tab2 {
+          label {Step 2} open
+          xywh {10 65 595 450} hide
+        } {
+          Fl_Browser imageBrowser {
+            label {Images:}
+            xywh {25 128 450 120} type Hold align 5
+          }
+          Fl_Button {} {
+            label Add
+            callback {char* fn = fl_file_chooser("Add image...", "{*.hdr,*.gipl,*.mha,*.mhd}", NULL, 0);
+if (fn == NULL)
+  return;
+
+const char* deforient = "RAI";
+
+imageBrowser->add(fn);
+imageOrientBrowser->add(deforient);}
+            xywh {25 254 100 30}
+          }
+          Fl_Button {} {
+            label Remove
+            callback {if (imageBrowser->size() == 0)
+  return;
+if (imageBrowser->value() == 0)
+  return;
+
+int pos = imageBrowser->value();
+
+imageBrowser->remove(pos);
+imageOrientBrowser->remove(pos);}
+            xywh {140 254 100 30}
+          }
+          Fl_Box {} {
+            label {Set number of iterations to zero to disable filtering, keep time step value small for stability}
+            xywh {25 299 580 30} box FLAT_BOX color 175 align 20
+          }
+          Fl_Box {} {
+            label {Specify images to be used for segmentation, all are registered to the first image in the list}
+            xywh {25 75 580 30} box FLAT_BOX color 175 align 20
+          }
+          Fl_Box {} {
+            label {Filtering parameters}
+            xywh {25 329 200 30} align 20
+          }
+          Fl_Input filterIterInput {
+            label {Iterations:}
+            xywh {100 359 80 30}
+          }
+          Fl_Input filterDtInput {
+            label {Time Step:}
+            xywh {259 359 80 30}
+          }
+          Fl_Button {} {
+            label Next
+            callback {tab1->hide();
+tab2->hide();
+tab4->hide();
+
+tab3->show();}
+            xywh {500 480 80 30}
+          }
+          Fl_Box {} {
+            label {Maximum degree of the bias field polynomial}
+            xywh {25 399 580 30} box FLAT_BOX color 175 align 20
+          }
+          Fl_Input biasDegreeInput {
+            label {Maximum bias degree:}
+            xywh {180 435 80 30}
+          }
+          Fl_Browser imageOrientBrowser {
+            label {Orientations:}
+            xywh {485 130 80 120} align 5
+          }
+          Fl_Button {} {
+            label {Change Orientation}
+            callback {if (imageBrowser->size() == 0)
+  return;
+if (imageBrowser->value() == 0)
+  return;
+
+int pos = imageBrowser->value();
+
+const char* curr = imageOrientBrowser->text(pos);
+orientInput->value(curr);
+
+orientwindow->show();
+orientwindow->set_modal();}
+            xywh {340 255 135 30}
+          }
+          Fl_Choice filterMethodChoice {
+            label {Method:} open
+            xywh {400 358 180 30} down_box BORDER_BOX
+          } {
+            menuitem {} {
+              label {Curvature flow}
+              xywh {0 0 100 20}
+            }
+            menuitem {} {
+              label {Grad aniso diffusion}
+              xywh {0 0 100 20}
+            }
+          }
+        }
+        Fl_Group tab3 {
+          label {Step 3} open
+          xywh {10 65 600 450} hide
+        } {
+          Fl_Output outdirOutput {
+            label {Output Directory:}
+            xywh {145 116 350 30} color 47
+          }
+          Fl_Choice formatChoice {
+            label {Output Image Format:} open
+            xywh {175 196 100 30} down_box BORDER_BOX
+          } {
+            menuitem {} {
+              label Analyze
+              xywh {5 5 100 20}
+            }
+            menuitem {} {
+              label GIPL
+              xywh {5 5 100 20}
+            }
+            menuitem {} {
+              label Meta
+              xywh {5 5 100 20}
+            }
+            menuitem {} {
+              label Nrrd
+              xywh {5 5 100 20}
+            }
+          }
+          Fl_Box {} {
+            label {Where to store all output files}
+            xywh {30 77 580 30} box FLAT_BOX color 175 align 20
+          }
+          Fl_Box {} {
+            label {Format of output images}
+            xywh {30 157 580 30} box FLAT_BOX color 175 align 20
+          }
+          Fl_Button {} {
+            label Change
+            callback {char* dir = fl_dir_chooser("Select output directory", NULL, 0);
+if (dir == NULL)
+  return;
+outdirOutput->value(dir);}
+            xywh {500 116 80 30}
+          }
+          Fl_Button {} {
+            label Next
+            callback {tab1->hide();
+tab2->hide();
+tab3->hide();
+
+tab4->show();}
+            xywh {500 480 80 30}
+          }
+        }
+        Fl_Group tab4 {
+          label {Step 4} open
+          xywh {10 65 595 450} hide
+        } {
+          Fl_Button {} {
+            label Run
+            callback {mainwindow->hide();
+runwindow->show();
+
+bool debugflag = (debugCheck->value() == 1);
+bool writeflag = !(nowriteCheck->value() == 1);
+
+  EMSParameters::Pointer p = this->GetParameters();
+
+try
+{
+  runEMS(p, debugflag, writeflag);
+}
+catch (itk::ExceptionObject& err)
+{
+  std::string s = "ITK exception caught:\\n";
+  s += std::string(err.what());
+  fl_alert(s.c_str());
+}
+catch (std::exception& e)
+{
+  std::string s = "Exception caught:\\n";
+  s += std::string(e.what());
+  fl_alert(s.c_str());
+}
+catch (std::string& s)
+{
+  fl_alert(s.c_str());
+}
+catch (...)
+{
+  fl_alert("Unknown exception occured");
+}
+
+runwindow->hide();
+mainwindow->show();}
+            xywh {500 480 80 30}
+          }
+          Fl_Check_Button debugCheck {
+            label {Write debug messages to terminal}
+            xywh {25 114 500 30} down_box DOWN_BOX
+          }
+          Fl_Check_Button nowriteCheck {
+            label {Minimal image write (only label image gets written)}
+            xywh {25 148 500 30} down_box DOWN_BOX
+          }
+          Fl_Box {} {
+            label {Additional run options, leave them unchecked unless necessary}
+            xywh {25 77 580 30} box FLAT_BOX color 175 align 20
+          }
+        }
+      }
+      Fl_Menu_Bar {} {
+        xywh {0 0 620 30}
+      } {
+        submenu {} {
+          label File open
+          xywh {0 0 100 20}
+        } {
+          menuitem {} {
+            label New
+            callback {// Reset values and GUI elements
+this->Initialize();}
+            xywh {0 0 100 20}
+          }
+          menuitem {} {
+            label Load
+            callback {char* fn = fl_file_chooser("Load parameter file...", "*.xml", NULL, 0);
+if (fn == NULL)
+  return;
+EMSParameters::Pointer p = readEMSParametersXML(fn);
+if (p.IsNull())
+{
+  fl_alert("Load failed");
+  return;
+}
+this->SetGUIElements(p);
+
+// Back to first tab
+tab4->hide();
+tab2->hide();
+tab3->hide();
+tab1->show();}
+            xywh {0 0 100 20}
+          }
+          menuitem {} {
+            label {Save as...}
+            callback {char* fn = fl_file_chooser("Save parameter file...", "*.xml", NULL, 0);
+if (fn == NULL)
+  return;
+
+EMSParameters::Pointer p = this->GetParameters();
+
+if (!writeEMSParametersXML(fn, p))
+  fl_alert("Save failed: bad parameters?");}
+            xywh {0 0 100 20} divider
+          }
+          menuitem {} {
+            label Quit
+            callback {exit(0);}
+            xywh {0 0 100 20}
+          }
+        }
+        submenu {} {
+          label Help open
+          xywh {0 0 100 20}
+        } {
+          menuitem {} {
+            label About
+            callback {aboutwindow->show();}
+            xywh {0 0 100 20}
+          }
+        }
+      }
+    }
+  }
+  Function {Initialize()} {open return_type void
+  } {
+    code {EMSParameters::Pointer p = EMSParameters::New();
+this->SetGUIElements(p);
+
+tab2->hide();
+tab3->hide();
+tab4->hide();
+
+tab1->show();} {}
+  }
+  Function {GetParameters()} {open return_type {EMSParameters::Pointer}
+  } {
+    code {EMSParameters::Pointer p = EMSParameters::New();
+
+p->SetSuffix(suffixInput->value());
+
+p->SetAtlasDirectory(atlasdirOutput->value());
+p->SetAtlasOrientation(atlasOrientInput->value());
+
+p->SetOutputDirectory(outdirOutput->value());
+
+p->SetPrior1(atof(prior1Input->value()));
+p->SetPrior2(atof(prior2Input->value()));
+p->SetPrior3(atof(prior3Input->value()));
+p->SetPrior4(atof(prior4Input->value()));
+
+int f = formatChoice->value();
+if (f == 0)
+  p->SetOutputFormat("Analyze");
+else if (f == 1)
+  p->SetOutputFormat("GIPL");
+else if (f == 3)
+  p->SetOutputFormat("Nrrd");
+else
+  p->SetOutputFormat("Meta");
+
+for (int i = 0; i < imageBrowser->size(); i++)
+  p->AddImage(imageBrowser->text(i+1), imageOrientBrowser->text(i+1));
+
+p->SetFilterIterations(atoi(filterIterInput->value()));
+p->SetFilterTimeStep(atof(filterDtInput->value()));
+
+int m = filterMethodChoice->value();
+if (m == 0)
+  p->SetFilterMethod("Curvature flow");
+else
+  p->SetFilterMethod("Grad aniso diffusion");
+
+p->SetMaxBiasDegree(atoi(biasDegreeInput->value()));
+
+p->SetDoAtlasWarp(warpAtlasButton->value() != 0);
+
+p->SetAtlasWarpGridX(atoi(warpInput_nx->value()));
+p->SetAtlasWarpGridY(atoi(warpInput_ny->value()));
+p->SetAtlasWarpGridZ(atoi(warpInput_nz->value()));
+
+return p;} {}
+  }
+  Function {SetGUIElements(EMSParameters::Pointer p)} {open return_type void
+  } {
+    code {suffixInput->value(p->GetSuffix().c_str());
+
+atlasdirOutput->value(p->GetAtlasDirectory().c_str());
+atlasOrientInput->value(p->GetAtlasOrientation().c_str());
+
+outdirOutput->value(p->GetOutputDirectory().c_str());
+
+formatChoice->value(2);
+if (p->GetOutputFormat().compare("Analyze") == 0)
+  formatChoice->value(0);
+if (p->GetOutputFormat().compare("GIPL") == 0)
+  formatChoice->value(1);
+if (p->GetOutputFormat().compare("Nrrd") == 0)
+  formatChoice->value(3);
+
+imageBrowser->clear();
+imageOrientBrowser->clear();
+DynArray<std::string> images = p->GetImages();
+DynArray<std::string> orients = p->GetImageOrientations();
+for (unsigned int i = 0; i < images.GetSize(); i++)
+{
+  imageBrowser->add(images[i].c_str());
+  imageOrientBrowser->add(orients[i].c_str());
+}
+
+{
+std::stringstream oss;
+oss << p->GetFilterIterations() << std::ends;
+filterIterInput->value(oss.str().c_str());
+}
+
+{
+std::stringstream oss;
+oss << p->GetFilterTimeStep() << std::ends;
+filterDtInput->value(oss.str().c_str());
+}
+
+std::string filtermethod = p->GetFilterMethod();
+if (filtermethod.compare("Curvature flow") == 0)
+  filterMethodChoice->value(0);
+else
+  filterMethodChoice->value(1);
+
+{
+std::stringstream oss;
+oss << p->GetPrior1() << std::ends;
+prior1Input->value(oss.str().c_str());
+}
+
+{
+std::stringstream oss;
+oss << p->GetPrior2() << std::ends;
+prior2Input->value(oss.str().c_str());
+}
+
+{
+std::stringstream oss;
+oss << p->GetPrior3() << std::ends;
+prior3Input->value(oss.str().c_str());
+}
+
+{
+std::stringstream oss;
+oss << p->GetPrior4() << std::ends;
+prior4Input->value(oss.str().c_str());
+}
+
+{
+std::stringstream oss;
+oss << p->GetMaxBiasDegree() << std::ends;
+biasDegreeInput->value(oss.str().c_str());
+}
+
+warpAtlasButton->value(p->GetDoAtlasWarp());
+
+{
+std::stringstream oss;
+oss << p->GetAtlasWarpGridX() << std::ends;
+warpInput_nx->value(oss.str().c_str());
+}
+
+{
+std::stringstream oss;
+oss << p->GetAtlasWarpGridY() << std::ends;
+warpInput_ny->value(oss.str().c_str());
+}
+
+{
+std::stringstream oss;
+oss << p->GetAtlasWarpGridZ() << std::ends;
+warpInput_nz->value(oss.str().c_str());
+}} {selected
+    }
+  }
+} 
