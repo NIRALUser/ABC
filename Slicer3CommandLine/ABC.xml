@@ -7,7 +7,9 @@ Utah-UNC atlas based segmentation pipeline. Generates output images after bias c
   </description>
   <version>2.0a</version>
   <contributor>Marcel Prastawa</contributor>
-  <documentation-url></documentation-url>
+  <documentation-url>
+  http://www.nitrc.org/projects/abc
+  </documentation-url>
   <license>3D Slicer</license>
   <acknowledgements>
 This work is part of the National Alliance for Medical Image Computing (NAMIC), funded by the National Institutes of Health through the NIH Roadmap for Medical Research, Grant U54 EB005149.
