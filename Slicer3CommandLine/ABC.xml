@@ -18,7 +18,7 @@ Utah-UNC atlas based segmentation pipeline. Generates output images after bias c
   <acknowledgements>
 This work is part of the National Alliance for Medical Image Computing (NAMIC), funded by the National Institutes of Health through the NIH Roadmap for Medical Research, Grant U54 EB005149.
   </acknowledgements>
- 
+<!-- --> 
   <parameters>
     <label>Input images</label>
     <description>Input images</description>
@@ -64,7 +64,7 @@ This work is part of the National Alliance for Medical Image Computing (NAMIC), 
     </image>
 
   </parameters>
-
+<!-- --> 
   <parameters>
     <label>Atlas</label>
     <description>Atlas</description>
@@ -85,7 +85,7 @@ This work is part of the National Alliance for Medical Image Computing (NAMIC), 
     </string>
 
   </parameters>
-
+<!-- --> 
   <parameters>
     <label>Output images</label>
     <description>Output images</description>
@@ -139,7 +139,7 @@ This work is part of the National Alliance for Medical Image Computing (NAMIC), 
     </image>
 
   </parameters>
-
+<!-- --> 
   <parameters advanced="true">
     <label>Advanced Segmentation Parameters</label>
     <description>Advanced parameters for segmentation</description>
@@ -160,5 +160,4 @@ This work is part of the National Alliance for Medical Image Computing (NAMIC), 
     <default>5,5,5</default>
     </integer-vector>
   </parameters>
-
 </executable>
