@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <executable>
-  <category>Segmentation</category>
-  <title>ABC (Atlas Based Classification)</title>
+  <category>
+  Segmentation
+  </category>
+  <title>
+  ABC (Atlas Based Classification)
+  </title>
   <description>
 Utah-UNC atlas based segmentation pipeline. Generates output images after bias correction and co-registration along with segmentation label image.
   </description>
@@ -16,8 +20,8 @@ This work is part of the National Alliance for Medical Image Computing (NAMIC), 
   </acknowledgements>
  
   <parameters>
-    <label>Input images and orientations</label>
-    <description>Input image and orientations</description>
+    <label>Input images</label>
+    <description>Input images</description>
 
     <image>
       <name>inputImage1</name>
@@ -137,7 +141,7 @@ This work is part of the National Alliance for Medical Image Computing (NAMIC), 
   </parameters>
 
   <parameters advanced="true">
-    <label>Segmentation Parameters</label>
+    <label>Advanced Segmentation Parameters</label>
     <description>Advanced parameters for segmentation</description>
 
     <integer>
