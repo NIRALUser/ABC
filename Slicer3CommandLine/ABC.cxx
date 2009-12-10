@@ -70,6 +70,12 @@ int run_ABC(int argc, char** argv)
   if (inputImage5.size() != 0)
     inputFiles.Append(inputImage5);
 
+  if (inputFiles.size() == 0)
+  {
+    std::cerr << "No input image files" << std::endl;
+    return;
+  }
+
   DynArray<std::string> inputOrients;
 /*
   if (inputOrient1.size() != 0)

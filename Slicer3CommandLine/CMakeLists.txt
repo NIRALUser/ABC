@@ -26,7 +26,6 @@ INCLUDE_DIRECTORIES(
   ${CMAKE_CURRENT_SOURCE_DIR}/../Engine/register
   ${CMAKE_CURRENT_SOURCE_DIR}/../Engine/robust
   ${CMAKE_CURRENT_SOURCE_DIR}/../Engine/spr
-  ${CMAKE_CURRENT_SOURCE_DIR}/../Engine/xmlio
 )
 
 ###
