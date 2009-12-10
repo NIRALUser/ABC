@@ -70,7 +70,7 @@ int run_ABC(int argc, char** argv)
   if (inputImage5.size() != 0)
     inputFiles.Append(inputImage5);
 
-  if (inputFiles.size() == 0)
+  if (inputFiles.GetSize() == 0)
   {
     std::cerr << "No input image files" << std::endl;
     return;
