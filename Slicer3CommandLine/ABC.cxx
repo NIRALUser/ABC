@@ -70,12 +70,6 @@ int run_ABC(int argc, char** argv)
   if (inputImage5.size() != 0)
     inputFiles.Append(inputImage5);
 
-  if (inputFiles.GetSize() == 0)
-  {
-    std::cerr << "No input image files" << std::endl;
-    return EXIT_SUCCESS;
-  }
-
   DynArray<std::string> inputOrients;
 /*
   if (inputOrient1.size() != 0)
@@ -269,6 +263,8 @@ int run_ABC(int argc, char** argv)
 int
 main(int argc, char** argv)
 {
+
+  PARSE_ARGS;
 
   itk::OutputWindow::SetInstance(itk::TextOutput::New());
 
