@@ -73,7 +73,7 @@ int run_ABC(int argc, char** argv)
   if (inputFiles.GetSize() == 0)
   {
     std::cerr << "No input image files" << std::endl;
-    return;
+    return EXIT_SUCCESS;
   }
 
   DynArray<std::string> inputOrients;
