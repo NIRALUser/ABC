@@ -1699,6 +1699,7 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
   m_TemplateBSplineTransform =
     PairRegistrationMethod<InputImagePixelType>::
       //RegisterBSpline(m_CorrectedImages[0], m_TemplateImage,
+      RegisterBSpline(downImg, m_TemplateImage,
         m_WarpGrid[0], m_WarpGrid[1], m_WarpGrid[2],
         PairRegistrationMethod<InputImagePixelType>::QuantizeNone,
         //PairRegistrationMethod<InputImagePixelType>::QuantizeFixed,
