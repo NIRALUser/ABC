@@ -524,8 +524,7 @@ AtlasRegistrationMethod<TOutputPixel, TProbabilityPixel>
       m_InputImages[0], m_ImageOrientations[0]);
     img_i = dirstandf->Standardize(img_i, m_ImageOrientations[i]);
 
-//TODO PP DEBUG
-    //img_i = this->PrefilterImage(img_i);
+    img_i = this->PrefilterImage(img_i);
 
     m_InputImages[i] = img_i;
   }

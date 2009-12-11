@@ -640,23 +640,28 @@ PairRegistrationMethod<TPixel>
   typedef BSplineTransformType::SpacingType SpacingType;
   SpacingType spacing = fixedImg->GetSpacing();
 
+  SpacingType shift;
+
+  SpacingType gridSpacing;
+
   BSplineTransformType::SizeType fixedImgSize =
     fixedImg->GetLargestPossibleRegion().GetSize();
 
   // Scale spacing by image and grid size
   for (unsigned int i = 0; i < 3; i++)
   {
-    spacing[i] *= floor( static_cast<double>(fixedImgSize[i] - 1)  /
-                  static_cast<double>(gridSize[i] - 1) );
+    gridSpacing[i] =
+      spacing[i] * static_cast<double>(fixedImgSize[i])  /
+      static_cast<double>(gridSize[i]);
+    shift[i] = floor(0.5 * SplineOrder) * gridSpacing[i] + spacing[i]*0.5 ;
   }
 
   // Adjust origin
-  SpacingType shift = direction*spacing;
-  origin  -=  shift;
+  OriginType gridOrigin = origin - direction*shift;
 
   btrafo->SetGridDirection(direction);
-  btrafo->SetGridOrigin(origin);
-  btrafo->SetGridSpacing(spacing);
+  btrafo->SetGridOrigin(gridOrigin);
+  btrafo->SetGridSpacing(gridSpacing);
   btrafo->SetGridRegion(bsplineRegion);
 
   typedef BSplineTransformType::ParametersType ParametersType;
@@ -685,9 +690,9 @@ PairRegistrationMethod<TPixel>
 
   optimizer->SetCostFunctionConvergenceFactor(1e+7);
   optimizer->SetProjectedGradientTolerance(1e-5);
-  optimizer->SetMaximumNumberOfIterations(30);
+  optimizer->SetMaximumNumberOfIterations(20);
   optimizer->SetMaximumNumberOfEvaluations(100);
-  optimizer->SetMaximumNumberOfCorrections(16);
+  optimizer->SetMaximumNumberOfCorrections(8);
 
   BSplineIterationUpdate::Pointer obs = BSplineIterationUpdate::New();
   optimizer->AddObserver(itk::IterationEvent(), obs);
@@ -717,7 +722,7 @@ PairRegistrationMethod<TPixel>
 
   metric->ReinitializeSeed( 76926294 );
 
-  registration->SetNumberOfLevels(2);
+  registration->SetNumberOfLevels(1);
   registration->StartRegistration();
 
   btrafo->SetParametersByValue(registration->GetLastTransformParameters());
