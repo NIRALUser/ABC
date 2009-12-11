@@ -1698,9 +1698,7 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
   // Compute B-spline
   m_TemplateBSplineTransform =
     PairRegistrationMethod<InputImagePixelType>::
-// PP QQ
-      RegisterBSpline(m_CorrectedImages[0], m_TemplateImage,
-      //RegisterBSpline(downImg, m_TemplateImage,
+      //RegisterBSpline(m_CorrectedImages[0], m_TemplateImage,
         m_WarpGrid[0], m_WarpGrid[1], m_WarpGrid[2],
         PairRegistrationMethod<InputImagePixelType>::QuantizeNone,
         //PairRegistrationMethod<InputImagePixelType>::QuantizeFixed,
