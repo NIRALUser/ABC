@@ -7,8 +7,8 @@
 #include "itkBinaryBallStructuringElement.h"
 #include "itkBinaryDilateImageFilter.h"
 #include "itkBinaryErodeImageFilter.h"
+#include "itkBoxMeanImageFilter.h"
 #include "itkBSplineDownsampleImageFilter.h"
-#include "itkDiscreteGaussianImageFilter.h"
 #include "itkNumericTraits.h"
 #include "itkResampleImageFilter.h"
 
@@ -416,6 +416,13 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
     return;
 
   this->CheckInput();
+
+  InputImageSpacingType spacing = m_InputImages[0]->GetSpacing();
+  double minspacing = spacing[0];
+  for (int i = 1; i < 3; i++)
+    if (spacing[i] < minspacing)
+      minspacing = spacing[i];
+  m_SampleSpacing = 2.0 * minspacing;
 
   this->ComputeMask();
 
@@ -1679,17 +1686,17 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
   // Reduce memory cost when using large # of samples for computing MI
   InputImagePointer downImg;
   {
-    typedef itk::DiscreteGaussianImageFilter<InputImageType, InputImageType>
-      BlurFilterType;
-    typename BlurFilterType::Pointer blurf = BlurFilterType::New();
-    blurf->SetInput(m_CorrectedImages[0]);
-    blurf->SetVariance(1.0);
-    blurf->Update();
+    typedef itk::BoxMeanImageFilter<InputImageType, InputImageType>
+      SmoothFilterType;
+    typename SmoothFilterType::Pointer smoothf = SmoothFilterType::New();
+    smoothf->SetInput(m_CorrectedImages[0]);
+    smoothf->SetRadius(2);
+    smoothf->Update();
 
     typedef itk::BSplineDownsampleImageFilter<InputImageType, InputImageType>
       DownsamplerType;
     typename DownsamplerType::Pointer downres = DownsamplerType::New();
-    downres->SetInput(blurf->GetOutput());
+    downres->SetInput(smoothf->GetOutput());
     downres->Update();
 
     downImg = downres->GetOutput();

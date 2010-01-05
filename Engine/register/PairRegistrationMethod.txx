@@ -296,6 +296,12 @@ PairRegistrationMethod<TPixel>
   AffineTransformType::CenterType movingCenter;
   movingImg->TransformIndexToPhysicalPoint(movingCenterIndex, movingCenter);
 
+  // Adjust parameters relative to fixed image size
+  double minSpacing = fixedSpacing[0];
+  for (unsigned int dim = 1; dim < 3; dim++)
+    if (fixedSpacing[dim] < minSpacing)
+      minSpacing = fixedSpacing[dim];
+
   // Define framework
   typedef itk::LinearInterpolateImageFunction<
     ImageType, double> InterpolatorType;
@@ -424,7 +430,7 @@ PairRegistrationMethod<TPixel>
   muLogMacro(<< "Beginning affine registration...\n");
 #if 0
   // Use ITK framework to handle multi resolution registration
-  //metric->SetSampleSpacing(1.0);
+  //metric->SetSampleSpacing(minSpacing);
 
   registration->SetOptimizer(amoeba);
 
@@ -440,7 +446,7 @@ PairRegistrationMethod<TPixel>
 
   // Start with amoeba (slow, less prone to local minima)
   muLogMacro(<< "Registering at [4x4x4]...\n");
-  metric->SetSampleSpacing(4.0);
+  metric->SetSampleSpacing(4.0*minSpacing);
   amoeba->SetCostFunction(metric);
   amoeba->SetInitialPosition(affine->GetParameters());
   amoeba->StartOptimization();
@@ -449,7 +455,7 @@ PairRegistrationMethod<TPixel>
   //anneal->StartOptimization();
 
   muLogMacro(<< "Registering at [2x2x2]...\n");
-  metric->SetSampleSpacing(2.0);
+  metric->SetSampleSpacing(2.0*minSpacing);
   amoeba->SetInitialPosition(amoeba->GetCurrentPosition());
   amoeba->StartOptimization();
 
@@ -464,14 +470,14 @@ PairRegistrationMethod<TPixel>
 /*
   // Powell only?
   muLogMacro(<< "Registering at [2x2x2]...\n");
-  metric->SetSampleSpacing(2.0);
+  metric->SetSampleSpacing(2.0*minSpacing);
   powell->SetCostFunction(metric);
   powell->SetInitialPosition(affine->GetParameters());
   powell->SetMaximumIterations(10);
   powell->StartOptimization();
 
   muLogMacro(<< "Registering at [1x1x1]...\n");
-  metric->SetSampleSpacing(1.0);
+  metric->SetSampleSpacing(1.0*minSpacing);
   powell->SetCostFunction(metric);
   powell->SetInitialPosition(powell->GetCurrentPosition());
   powell->SetMaximumIterations(5);
@@ -740,7 +746,7 @@ PairRegistrationMethod<TPixel>
   metric->SetNumberOfBins(numHistogramBins);
   metric->SetNormalized(true);
 
-  metric->SetSampleSpacing(2.0);
+  metric->SetSampleSpacing(2.0*minSpacing);
   optimizer->SetCostFunction(metric);
   optimizer->SetInitialPosition(initp);
   optimizer->StartOptimization();
@@ -759,7 +765,7 @@ PairRegistrationMethod<TPixel>
 
   amoeba->AddObserver(itk::IterationEvent(), BSplineIterationUpdate::New());
 
-  metric->SetSampleSpacing(4.0);
+  metric->SetSampleSpacing(4.0*minSpacing);
   amoeba->SetCostFunction(metric);
   amoeba->SetInitialPosition(initp);
   amoeba->StartOptimization();

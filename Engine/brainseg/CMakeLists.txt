@@ -14,7 +14,6 @@ INCLUDE_DIRECTORIES(
   ${CMAKE_CURRENT_SOURCE_DIR}/../bias
   ${CMAKE_CURRENT_SOURCE_DIR}/../common
   ${CMAKE_CURRENT_SOURCE_DIR}/../conn
-  ${CMAKE_CURRENT_SOURCE_DIR}/../qhull
   ${CMAKE_CURRENT_SOURCE_DIR}/../register
   ${CMAKE_CURRENT_SOURCE_DIR}/../robust
   ${CMAKE_CURRENT_SOURCE_DIR}/../spr
@@ -26,18 +25,6 @@ SET(BRAINSEG_SRCS
   ../common/MersenneTwisterRNG.cxx
   ../common/Timer.cxx
   ../common/muFile.cxx
-  ../qhull/user.c
-  ../qhull/global.c
-  ../qhull/stat.c
-  ../qhull/io.c
-  ../qhull/geom2.c
-  ../qhull/poly2.c
-  ../qhull/merge.c
-  ../qhull/qhull.c
-  ../qhull/geom.c
-  ../qhull/poly.c
-  ../qhull/qset.c
-  ../qhull/mem.c
   ../register/AmoebaOptimizer.cxx
   ../register/AtlasRegistrationMethod_float+float.cxx
   ../register/ChainedAffineTransform3D.cxx
@@ -45,7 +32,7 @@ SET(BRAINSEG_SRCS
   ../register/PairRegistrationMethod_float.cxx
   ../register/PowellOptimizer.cxx
   ../register/SimulatedAnnealingOptimizer.cxx
-  ../robust/QHullMSTClusteringProcess.cxx
+  ../robust/KruskalMSTClusteringProcess.cxx
   ../spr/KMeansEstimator.cxx
   ../xmlio/EMSParametersXMLFile.cxx
   EMSParameters.cxx
