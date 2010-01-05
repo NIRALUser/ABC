@@ -341,9 +341,9 @@ PairRegistrationMethod<TPixel>
 
   // Set steps for optimization
   PowellOptimizer::ParametersType steps(12);
-  steps[0] = MU_AFFINE_STEP_TRANSLATE;
-  steps[1] = MU_AFFINE_STEP_TRANSLATE;
-  steps[2] = MU_AFFINE_STEP_TRANSLATE;
+  steps[0] = MU_AFFINE_STEP_TRANSLATE * minSpacing;
+  steps[1] = MU_AFFINE_STEP_TRANSLATE * minSpacing;
+  steps[2] = MU_AFFINE_STEP_TRANSLATE * minSpacing;
   steps[3] = MU_AFFINE_STEP_ROTATE;
   steps[4] = MU_AFFINE_STEP_ROTATE;
   steps[5] = MU_AFFINE_STEP_ROTATE;
