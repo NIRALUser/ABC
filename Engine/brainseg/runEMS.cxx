@@ -104,7 +104,7 @@ runEMS(EMSParameters* emsp, bool debugflag, bool writemoreflag)
   std::string metasuffstr =
     std::string("_") + std::string(emsp->GetSuffix()) + std::string(".mha");
 
-  muLogMacro(<< "mu::brainseg\n");
+  muLogMacro(<< "ABC: Atlas Based Classification\n");
   muLogMacro(<< "========================================\n");
   muLogMacro(<< "Program compiled on: " << __DATE__ << "\n");
   muLogMacro(<< "\n");
