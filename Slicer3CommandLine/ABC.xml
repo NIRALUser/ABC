@@ -84,15 +84,6 @@ This work is part of the National Alliance for Medical Image Computing (NAMIC), 
     <longflag>--atlasOrient</longflag>
     </string>
 
-<!--
-    <float-vector>
-    <name>priorWeights</name>
-    <label>Weight adjustment for priors (1,1,1,..) </label>
-    <longflag>--priorWeights</longflag>
-    <default>1,1,1,1</default>
-    </float-vector>
--->
-
   </parameters>
 <!-- --> 
   <parameters>
