@@ -165,7 +165,7 @@ This work is part of the National Alliance for Medical Image Computing (NAMIC), 
       <name>coregMapType</name>
       <description>Type of transform to produce</description>
       <label>Coregistration Transform Type</label>
-      <longflag>coregMapType</longflag>
+      <longflag>--coregMapType</longflag>
       <element>affine</element>
       <element>rigid</element>
       <element>identity</element>
