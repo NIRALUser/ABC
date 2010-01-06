@@ -9,8 +9,8 @@
   <description>
 Utah-UNC atlas based segmentation pipeline. Generates output images after bias correction and co-registration along with segmentation label image.
   </description>
-  <version>2.0a</version>
-  <contributor>Marcel Prastawa</contributor>
+  <version>1.1</version>
+  <contributor>Marcel Prastawa prastawa@sci.utah.edu</contributor>
   <documentation-url>
   http://www.nitrc.org/projects/abc
   </documentation-url>
