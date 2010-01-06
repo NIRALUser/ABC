@@ -110,6 +110,7 @@ std::string
 get_ext(const char* fn)
 {
 
+/*
   int n = strlen(fn);
 
   int offt = n+1;
@@ -141,6 +142,19 @@ get_ext(const char* fn)
   delete [] ext;
 
   return retstr;
+*/
+  std::string filename(fn);
+  std::string::size_type idx;
+
+  idx = filename.rfind('.');
+
+  std::string ext = "";
+  if(idx != std::string::npos)
+  {
+    ext = filename.substr(idx+1);
+  }
+
+  return ext;
 
 }
 

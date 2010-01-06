@@ -161,6 +161,8 @@ protected:
   void SplitPrior(unsigned int iprior);
 
   void ComputeDistributions();
+  void ComputeDistributionsRobust(); // Same, but with robust mean
+
   void ComputePosteriors(bool fullRes);
 
   void CorrectBias(unsigned int degree, bool fullRes);

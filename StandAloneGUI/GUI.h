@@ -41,10 +41,7 @@ private:
 public:
   Fl_Input *suffixInput;
   Fl_Output *atlasdirOutput;
-  Fl_Input *prior1Input;
-  Fl_Input *prior2Input;
-  Fl_Input *prior3Input;
-  Fl_Input *prior4Input;
+  Fl_Input *prWeightsInput;
 private:
   void cb_Change_i(Fl_Button*, void*);
   static void cb_Change(Fl_Button*, void*);

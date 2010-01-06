@@ -32,6 +32,7 @@ SET(BRAINSEG_SRCS
   ../register/PairRegistrationMethod_float.cxx
   ../register/PowellOptimizer.cxx
   ../register/SimulatedAnnealingOptimizer.cxx
+  ../robust/FastMCDSampleFilter.cxx
   ../robust/KruskalMSTClusteringProcess.cxx
   ../spr/KMeansEstimator.cxx
   ../xmlio/EMSParametersXMLFile.cxx

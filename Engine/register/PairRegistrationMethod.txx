@@ -389,7 +389,7 @@ PairRegistrationMethod<TPixel>
     derivSteps[i] = 1e-4; // Translation steps
   metric->SetDerivativeStepLengths(derivSteps);
 
-  metric->SetNumberOfBins(128);
+  metric->SetNumberOfBins(200);
 
 /*
   // Not needed for Havrda-Charvat
@@ -540,7 +540,7 @@ PairRegistrationMethod<TPixel>
   typedef itk::RescaleIntensityImageFilter<ImageType, IndexImageType>
     RescalerType;
 
-  unsigned int numHistogramBins = 128;
+  unsigned int numHistogramBins = 200;
 
   IndexImageType::Pointer qdFixedImg;
   if (qopt == QuantizeFixed || qopt == QuantizeBoth)

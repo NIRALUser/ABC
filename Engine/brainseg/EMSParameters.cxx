@@ -12,7 +12,7 @@ EMSParameters
 
   m_AtlasOrientation = "RAI";
 
-  m_DoAtlasWarp = true;
+  m_DoAtlasWarp = false;
 
   m_OutputDirectory = "";
   m_OutputFormat = "Meta";
@@ -30,10 +30,7 @@ EMSParameters
   m_AtlasWarpGridY = 5;
   m_AtlasWarpGridZ = 5;
 
-  m_Prior1 = 1.0;
-  m_Prior2 = 1.0;
-  m_Prior3 = 1.0;
-  m_Prior4 = 1.0;
+  m_PriorWeights = std::vector<double>(4, 1.0);
 
   m_AtlasLinearMapType = "affine";
   m_ImageLinearMapType = "affine";
@@ -108,10 +105,8 @@ EMSParameters
   os << "Filter iterations = " << m_FilterIterations << std::endl;
   os << "Filter time step = " << m_FilterTimeStep << std::endl;
   os << "Max bias degree = " << m_MaxBiasDegree << std::endl;
-  os << "Prior 1 = " << m_Prior1 << std::endl;
-  os << "Prior 2 = " << m_Prior2 << std::endl;
-  os << "Prior 3 = " << m_Prior3 << std::endl;
-  os << "Prior 4 = " << m_Prior4 << std::endl;
+  for (unsigned int i = 0; i < m_PriorWeights.size(); i++)
+    os << "Prior " << i+1 << " = " << m_PriorWeights[i] << std::endl;
   if (m_DoAtlasWarp)
   {
     os << "Atlas warping, grid = "

@@ -69,14 +69,13 @@ public:
   itkGetMacro(AtlasWarpGridZ, unsigned int);
   itkSetMacro(AtlasWarpGridZ, unsigned int);
 
-  itkGetMacro(Prior1, float);
-  itkSetMacro(Prior1, float);
-  itkGetMacro(Prior2, float);
-  itkSetMacro(Prior2, float);
-  itkGetMacro(Prior3, float);
-  itkSetMacro(Prior3, float);
-  itkGetMacro(Prior4, float);
-  itkSetMacro(Prior4, float);
+  void AppendPriorWeight(double w)
+  { m_PriorWeights.push_back(w); }
+
+  void ClearPriorWeights() { m_PriorWeights.clear(); }
+
+  std::vector<double> GetPriorWeights() const
+  { return m_PriorWeights; }
 
   itkGetMacro(AtlasLinearMapType, std::string);
   itkSetMacro(AtlasLinearMapType, std::string);
@@ -112,10 +111,7 @@ protected:
 
   unsigned int m_MaxBiasDegree;
 
-  float m_Prior1;
-  float m_Prior2;
-  float m_Prior3;
-  float m_Prior4;
+  std::vector<double> m_PriorWeights;
 
   std::string m_AtlasLinearMapType;
   std::string m_ImageLinearMapType;

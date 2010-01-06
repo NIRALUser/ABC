@@ -257,17 +257,17 @@ Fl_Menu_Item GUI::menu_[] = {
 Fl_Double_Window* GUI::MakeWindow() {
   { aboutwindow = new Fl_Double_Window(612, 668, "ABC: About");
     aboutwindow->user_data((void*)(this));
-    { Fl_Box* o = new Fl_Box(5, 5, 600, 600, "\r\nABC (Atlas Based Classification) GUI v1.0\r\nNormal brain segmentation fr\
-om MRI\r\n\r\nMarcel Prastawa\r\nprastawa@@sci.utah.edu\r\nhttp://www.sci.utah\
-.edu/~prastawa\r\n\r\nThis software is provided for research purposes only\r\n\
-\r\nImplemented using FLTK and ITK\r\nhttp://www.fltk.org\r\nhttp://www.itk.or\
-g\r\n\r\nBased on the following papers:\r\n\r\nMaes, F., Collignon, A., Vander\
-meulen, D., Marchal, G., Suetens, P. \r\nMultimodality image registration by m\
-aximization of mutual information.\r\nIEEE TMI 1997; 16(2):187-198\r\n\r\nVan \
-Leemput K, Maes F, Vandermeulen D, Suetens P. Automated model based\r\ntissue \
-classification of MR images of the brain. IEEE TMI 1999; 18:897-908\r\n\r\nVan\
- Leemput K, Maes F, Vandermeulen D, Suetens P. Automated model based\r\nbias f\
-ield correction of MR images of the brain. IEEE TMI 1999; 18:885-896\r\n");
+    { Fl_Box* o = new Fl_Box(5, 5, 600, 600, "\nABC (Atlas Based Classification) GUI v1.0\nNormal brain segmentation from M\
+RI\n\nMarcel Prastawa\nprastawa@@sci.utah.edu\nhttp://www.sci.utah.edu/~prasta\
+wa\n\nThis software is provided for research purposes only\n\nImplemented usin\
+g FLTK and ITK\nhttp://www.fltk.org\nhttp://www.itk.org\n\nBased on the follow\
+ing papers:\n\nMaes, F., Collignon, A., Vandermeulen, D., Marchal, G., Suetens\
+, P. \nMultimodality image registration by maximization of mutual information.\
+\nIEEE TMI 1997; 16(2):187-198\n\nVan Leemput K, Maes F, Vandermeulen D, Suete\
+ns P. Automated model based\ntissue classification of MR images of the brain. \
+IEEE TMI 1999; 18:897-908\n\nVan Leemput K, Maes F, Vandermeulen D, Suetens P.\
+ Automated model based\nbias field correction of MR images of the brain. IEEE \
+TMI 1999; 18:885-896\n");
       o->box(FL_FLAT_BOX);
       o->color((Fl_Color)26);
       o->align(FL_ALIGN_TOP_LEFT|FL_ALIGN_INSIDE);
@@ -294,7 +294,7 @@ ield correction of MR images of the brain. IEEE TMI 1999; 18:885-896\r\n");
     } // Fl_Box* o
     runwindow->end();
   } // Fl_Double_Window* runwindow
-  { mainwindow = new Fl_Double_Window(600, 535, "ABC");
+  { mainwindow = new Fl_Double_Window(600, 538, "ABC");
     mainwindow->user_data((void*)(this));
     { Fl_Tabs* o = new Fl_Tabs(0, 35, 620, 500);
       o->box(FL_UP_BOX);
@@ -318,19 +318,13 @@ ield correction of MR images of the brain. IEEE TMI 1999; 18:885-896\r\n");
           o->color((Fl_Color)175);
           o->align(FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
         } // Fl_Box* o
-        { Fl_Box* o = new Fl_Box(25, 319, 580, 30, "Global class priors");
+        { Fl_Box* o = new Fl_Box(25, 319, 580, 30, "Prior weight adjustments (space separated)");
           o->box(FL_FLAT_BOX);
           o->color((Fl_Color)175);
           o->align(FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
         } // Fl_Box* o
-        { prior1Input = new Fl_Input(55, 354, 40, 30, "WM");
-        } // Fl_Input* prior1Input
-        { prior2Input = new Fl_Input(130, 354, 40, 30, "GM");
-        } // Fl_Input* prior2Input
-        { prior3Input = new Fl_Input(210, 354, 40, 30, "CSF");
-        } // Fl_Input* prior3Input
-        { prior4Input = new Fl_Input(300, 354, 40, 30, "Other");
-        } // Fl_Input* prior4Input
+        { prWeightsInput = new Fl_Input(75, 354, 400, 30, "Coefs:");
+        } // Fl_Input* prWeightsInput
         { Fl_Button* o = new Fl_Button(500, 203, 80, 30, "Change");
           o->callback((Fl_Callback*)cb_Change);
         } // Fl_Button* o
@@ -486,10 +480,12 @@ p->SetAtlasOrientation(atlasOrientInput->value());
 
 p->SetOutputDirectory(outdirOutput->value());
 
-p->SetPrior1(atof(prior1Input->value()));
-p->SetPrior2(atof(prior2Input->value()));
-p->SetPrior3(atof(prior3Input->value()));
-p->SetPrior4(atof(prior4Input->value()));
+std::stringstream ss(prWeightsInput->value());
+
+p->ClearPriorWeights();
+std::string buf;
+while (ss >> buf)
+  p->AppendPriorWeight(atof(buf.c_str()));
 
 int f = formatChoice->value();
 if (f == 0)
@@ -569,27 +565,14 @@ else
   filterMethodChoice->value(1);
 
 {
-std::stringstream oss;
-oss << p->GetPrior1() << std::ends;
-prior1Input->value(oss.str().c_str());
-}
+std::vector<double> prWeights = p->GetPriorWeights();
 
-{
 std::stringstream oss;
-oss << p->GetPrior2() << std::ends;
-prior2Input->value(oss.str().c_str());
-}
-
-{
-std::stringstream oss;
-oss << p->GetPrior3() << std::ends;
-prior3Input->value(oss.str().c_str());
-}
-
-{
-std::stringstream oss;
-oss << p->GetPrior4() << std::ends;
-prior4Input->value(oss.str().c_str());
+for (unsigned int i = 0; i < prWeights.size(); i++)
+  oss << prWeights[i] << " ";
+oss << std::ends;
+prWeightsInput->value("");
+prWeightsInput->value(oss.str().c_str());
 }
 
 {

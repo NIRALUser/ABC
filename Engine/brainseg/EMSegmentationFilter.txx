@@ -19,6 +19,8 @@
 #include "LLSBiasCorrector.h"
 #include "Log.h"
 #include "MersenneTwisterRNG.h"
+
+#include "FastMCDSampleFilter.h"
 #include "KruskalMSTClusteringProcess.h"
 
 #include <iostream>
@@ -703,6 +705,233 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
 template <class TInputImage, class TProbabilityImage>
 void
 EMSegmentationFilter <TInputImage, TProbabilityImage>
+::ComputeDistributionsRobust()
+{
+
+  unsigned numChannels = m_InputImages.GetSize();
+  unsigned numPriors = m_Priors.GetSize();
+
+  unsigned int numClasses = 0;
+  for (unsigned int i = 0; i < numPriors; i++)
+    numClasses += m_NumberOfGaussians[i];
+
+  InputImageIndexType ind;
+
+  InputImageSizeType size =
+    m_InputImages[0]->GetLargestPossibleRegion().GetSize();
+
+  InputImageSpacingType spacing = m_InputImages[0]->GetSpacing();
+
+  InputImageOffsetType skips;
+  skips[0] = (unsigned int)fabs(m_SampleSpacing / spacing[0]);
+  skips[1] = (unsigned int)fabs(m_SampleSpacing / spacing[1]);
+  skips[2] = (unsigned int)fabs(m_SampleSpacing / spacing[2]);
+
+  if (skips[0] == 0)
+    skips[0] = 1;
+  if (skips[1] == 0)
+    skips[1] = 1;
+  if (skips[2] == 0)
+    skips[2] = 1;
+
+  // Compute sum of posteriors for each class
+  VectorType sumClassProb(numClasses);
+  for (unsigned iclass = 0; iclass < numClasses; iclass++)
+  {
+    double tmp = vnl_math::eps;
+    for (ind[2] = 0; ind[2] < (long)size[2]; ind[2]+=skips[2])
+      for (ind[1] = 0; ind[1] < (long)size[1]; ind[1]+=skips[1])
+        for (ind[0] = 0; ind[0] < (long)size[0]; ind[0]+=skips[0])
+        {
+          if (m_Mask->GetPixel(ind) == 0)
+            continue;
+          tmp += (double)m_Posteriors[iclass]->GetPixel(ind);
+        }
+     sumClassProb[iclass] = tmp;
+  }
+
+  // Compute means
+  m_Means = MatrixType(numChannels, numClasses);
+  for (unsigned int iclass = 0; iclass < numClasses; iclass++)
+  {
+    // Get samples with high probability
+
+    typedef itk::ImageRegionConstIteratorWithIndex<ProbabilityImageType>
+      IteratorType;
+
+    IteratorType it(m_Posteriors[iclass], m_Posteriors[iclass]->GetRequestedRegion());
+
+    double maxP = 0;
+    for (it.GoToBegin(); !it.IsAtEnd(); ++it)
+    {
+      double p = it.Get();
+      if (p > maxP)
+        maxP = p;
+    }
+
+    double probThres = 0.8*maxP;
+
+    unsigned int numPossibleSamples = 0;
+    for (it.GoToBegin(); !it.IsAtEnd(); ++it)
+    {
+      ProbabilityImageIndexType ind = it.GetIndex();
+      if (m_Mask->GetPixel(ind) == 0)
+        continue;
+      if (it.Get() >= probThres)
+        numPossibleSamples++;
+    }
+
+    unsigned char* selectMask = new unsigned char[numPossibleSamples];
+    for (unsigned int i = 0; i < numPossibleSamples; i++)
+      selectMask[i] = 0;
+
+    unsigned int numSamples = numPossibleSamples / 2 + 1;
+    if (numSamples > 1000000)
+      numSamples = 1000000;
+
+    MersenneTwisterRNG* rng = MersenneTwisterRNG::GetGlobalInstance();
+
+    if (numSamples < numPossibleSamples)
+    {
+      unsigned int* selectInd =
+        rng->GenerateIntegerSequence(numSamples, numPossibleSamples-1);
+      for (unsigned int i = 0; i < numSamples; i++)
+        selectMask[selectInd[i]] = 1;
+      delete [] selectInd;
+    }
+    else
+    {
+      for (unsigned int i = 0; i < numSamples; i++)
+        selectMask[i] = 1;
+    }
+
+    FastMCDSampleFilter::SampleMatrixType sampleM(numSamples, numChannels, 0.0);
+
+    unsigned int r = 0;
+    unsigned int s = 0;
+    for (it.GoToBegin(); !it.IsAtEnd(); ++it)
+    {
+      ProbabilityImageIndexType ind = it.GetIndex();
+      if (m_Mask->GetPixel(ind) == 0)
+        continue;
+
+      if (selectMask[r] != 0)
+      {
+        for (unsigned int ichan = 0; ichan < numChannels; ichan++)
+          sampleM(s, ichan) = m_CorrectedImages[ichan]->GetPixel(ind);
+        s++;
+
+        if (s >= numSamples)
+          break;
+      }
+
+      r++;
+
+      if (r >= numPossibleSamples)
+        break;
+    }
+
+    delete [] selectMask;
+
+
+    // Compute robust mean
+    FastMCDSampleFilter mcdf;
+
+    mcdf.SetChangeTolerance(1e-4);
+    mcdf.SetCoverFraction(0.5);
+    mcdf.SetNumberOfStarts(1000);
+    mcdf.SetMaxCStepIterations(10);
+
+    FastMCDSampleFilter::VectorType mu;
+    FastMCDSampleFilter::MatrixType sigma; // Discarded
+
+    mcdf.GetRobustEstimate(mu, sigma, sampleM);
+
+    // m_Means.set_column(iclass, mu);
+    for (unsigned int ichan = 0; ichan < numChannels; ichan++)
+      m_Means(ichan, iclass) = mu[ichan];
+
+  } // end means loop
+
+  // Fix mean of last class to zero vector (background)
+  for (unsigned int ichan = 0; ichan < numChannels; ichan++)
+    m_Means(ichan, numClasses-1) = 0;
+
+  // Compute covariances
+  DynArray<MatrixType> oldCovariances = m_Covariances;
+  if (oldCovariances.GetSize() != numClasses)
+  {
+    oldCovariances.Clear();
+    for (unsigned int iclass = 0; iclass < numClasses; iclass++)
+    {
+      MatrixType C(numChannels, numChannels);
+      C.set_identity();
+      C *= 1e-10;
+      oldCovariances.Append(C);
+    }
+  }
+  m_Covariances.Clear();
+  for (unsigned int iclass = 0; iclass < numClasses; iclass++)
+  {
+
+    MatrixType covtmp(numChannels, numChannels);
+
+    for (unsigned int r = 0; r < numChannels; r++)
+    {
+
+      double mu1 = m_Means(r, iclass);
+      InputImagePointer img1 = m_CorrectedImages[r];
+
+      for (unsigned int c = r; c < numChannels; c++)
+      {
+
+        double mu2 = m_Means(c, iclass);
+        InputImagePointer img2 = m_CorrectedImages[c];
+
+        double v = 0;
+        double diff1 = 0;
+        double diff2 = 0;
+        for (ind[2] = 0; ind[2] < (long)size[2]; ind[2]+=skips[2])
+          for (ind[1] = 0; ind[1] < (long)size[1]; ind[1]+=skips[1])
+            for (ind[0] = 0; ind[0] < (long)size[0]; ind[0]+=skips[0])
+            {
+              if (m_Mask->GetPixel(ind) == 0)
+                continue;
+              diff1 = (double)(img1->GetPixel(ind)) - mu1;
+              diff2 = (double)(img2->GetPixel(ind)) - mu2;
+              v += (double)(m_Posteriors[iclass]->GetPixel(ind)) *
+                (diff1*diff2);
+            }
+
+        v /= sumClassProb[iclass];
+
+        // Adjust diagonal, to make sure covariance is pos-def
+        if (r == c)
+          v += 1e-20;
+
+        // Assign value to the covariance matrix (symmetric)
+        covtmp(r, c) = v;
+        covtmp(c, r) = v;
+
+      }
+
+    }
+
+    double detcov = vnl_determinant(covtmp);
+
+    // Hack: use old covariance if the new one is singular
+    if (detcov < 1e-20)
+      m_Covariances.Append(oldCovariances[iclass]);
+    else
+      m_Covariances.Append(covtmp);
+
+  } // end covariance loop
+
+}
+
+template <class TInputImage, class TProbabilityImage>
+void
+EMSegmentationFilter <TInputImage, TProbabilityImage>
 ::SplitPriorMST(unsigned int iprior)
 {
 
@@ -1258,7 +1487,7 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
   }
 
   // Compute initial distribution parameters
-  this->ComputeDistributions();
+  this->ComputeDistributionsRobust();
 
   // Split distributions with the same prior
   muLogMacro(<< "Splitting distributions with same prior\n");
@@ -1694,7 +1923,7 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
       SmoothFilterType;
     typename SmoothFilterType::Pointer smoothf = SmoothFilterType::New();
     smoothf->SetInput(m_CorrectedImages[0]);
-    smoothf->SetRadius(2);
+    smoothf->SetRadius(3);
     smoothf->Update();
 
     typedef itk::BSplineDownsampleImageFilter<InputImageType, InputImageType>

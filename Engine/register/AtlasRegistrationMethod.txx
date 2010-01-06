@@ -733,8 +733,6 @@ AtlasRegistrationMethod<TOutputPixel, TProbabilityPixel>
   {
     ++prIndex;
 
-    muLogMacro(<< "Resampling atlas prior " << prIndex << "...\n");
-
     ReaderPointer reader = ReaderType::New();
 
     try
@@ -748,6 +746,8 @@ AtlasRegistrationMethod<TOutputPixel, TProbabilityPixel>
     {
       break;
     }
+
+    muLogMacro(<< "Resampling atlas prior " << prIndex << "...\n");
 
     InternalImagePointer prob_i = reader->GetOutput();
 

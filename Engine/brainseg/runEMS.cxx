@@ -104,6 +104,8 @@ runEMS(EMSParameters* emsp, bool debugflag, bool writemoreflag)
   std::string metasuffstr =
     std::string("_") + std::string(emsp->GetSuffix()) + std::string(".mha");
 
+  std::vector<double> prWeights = emsp->GetPriorWeights();
+
   muLogMacro(<< "ABC: Atlas Based Classification\n");
   muLogMacro(<< "========================================\n");
   muLogMacro(<< "Program compiled on: " << __DATE__ << "\n");
@@ -135,9 +137,10 @@ runEMS(EMSParameters* emsp, bool debugflag, bool writemoreflag)
     << emsp->GetFilterIterations()
     << " iterations, dt = " << emsp->GetFilterTimeStep() << "\n");
   muLogMacro(
-    << "Prior weight scales: " << emsp->GetPrior1() << ", "
-    << emsp->GetPrior2() << ", " << emsp->GetPrior3()
-    << ", " << emsp->GetPrior4() << "\n");
+    << "Prior weight scales: " );
+  for (unsigned int i = 0; i < prWeights.size(); i++)
+    muLogMacro(<< prWeights[i] << " ");
+  muLogMacro(<< "\n");
   muLogMacro(
     << "Max bias polynomial degree: " << emsp->GetMaxBiasDegree() << "\n");
   muLogMacro(<< "Atlas warping: " << emsp->GetDoAtlasWarp() << "\n");
@@ -320,12 +323,10 @@ runEMS(EMSParameters* emsp, bool debugflag, bool writemoreflag)
 
   segfilter->SetFOVMask(fovmask);
 
-  SegFilterType::VectorType priorweights(4);
-  priorweights[0] = emsp->GetPrior1();
-  priorweights[1] = emsp->GetPrior2();
-  priorweights[2] = emsp->GetPrior3();
-  priorweights[3] = emsp->GetPrior4();
-  segfilter->SetPriorWeights(priorweights);
+  SegFilterType::VectorType prWeightsVec(prWeights.size());
+  for (unsigned int i = 0; i < prWeights.size(); i++)
+    prWeightsVec[i] = prWeights[i];
+  segfilter->SetPriorWeights(prWeightsVec);
 
   segfilter->SetMaxBiasDegree(emsp->GetMaxBiasDegree());
 

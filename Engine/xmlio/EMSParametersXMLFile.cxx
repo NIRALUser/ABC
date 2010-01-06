@@ -116,25 +116,10 @@ EMSParametersXMLFileReader
       itkExceptionMacro(<< "Error: negative bias degree");
     m_PObject->SetMaxBiasDegree(degree);
   }
-  else if(itksys::SystemTools::Strucmp(name,"PRIOR-1") == 0)
+  else if(itksys::SystemTools::Strucmp(name,"PRIOR") == 0)
   {
     double p = atof(m_CurrentString.c_str());
-    m_PObject->SetPrior1(p);
-  }
-  else if(itksys::SystemTools::Strucmp(name,"PRIOR-2") == 0)
-  {
-    double p = atof(m_CurrentString.c_str());
-    m_PObject->SetPrior2(p);
-  }
-  else if(itksys::SystemTools::Strucmp(name,"PRIOR-3") == 0)
-  {
-    double p = atof(m_CurrentString.c_str());
-    m_PObject->SetPrior3(p);
-  }
-  else if(itksys::SystemTools::Strucmp(name,"PRIOR-4") == 0)
-  {
-    double p = atof(m_CurrentString.c_str());
-    m_PObject->SetPrior4(p);
+    m_PObject->AppendPriorWeight(p);
   }
   else if(itksys::SystemTools::Strucmp(name,"DO-ATLAS-WARP") == 0)
   {
@@ -267,10 +252,9 @@ EMSParametersXMLFileWriter
 
   WriteField<unsigned int>(this, "MAX-BIAS-DEGREE", p->GetMaxBiasDegree(), output);
 
-  WriteField<float>(this, "PRIOR-1", p->GetPrior1(), output);
-  WriteField<float>(this, "PRIOR-2", p->GetPrior2(), output);
-  WriteField<float>(this, "PRIOR-3", p->GetPrior3(), output);
-  WriteField<float>(this, "PRIOR-4", p->GetPrior4(), output);
+  std::vector<double> prWeights = p->GetPriorWeights();
+  for (unsigned int i = 0; i < prWeights.size(); i++)
+    WriteField<float>(this, "PRIOR", prWeights[i], output);
 
   WriteField<bool>(this, "DO-ATLAS-WARP", p->GetDoAtlasWarp(), output);
 
