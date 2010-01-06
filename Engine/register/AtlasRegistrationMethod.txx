@@ -30,6 +30,7 @@
 #include "ImageDirectionStandardizer.h"
 
 #include <fstream>
+#include <sstream>
 
 template <class TOutputPixel, class TProbabilityPixel>
 AtlasRegistrationMethod<TOutputPixel, TProbabilityPixel>
@@ -42,7 +43,8 @@ AtlasRegistrationMethod<TOutputPixel, TProbabilityPixel>
 
   m_TemplateFileName = "";
 
-  m_ProbabilityFileNames.Clear();
+  m_ProbabilityDirectory = "";
+
   m_ImageFileNames.Clear();
 
   m_AtlasOrientation = "";
@@ -83,7 +85,6 @@ AtlasRegistrationMethod<TOutputPixel, TProbabilityPixel>
 {
 
   m_ImageFileNames.Clear();
-  m_ProbabilityFileNames.Clear();
 
   m_Probabilities.Clear();
   m_Images.Clear();
@@ -109,8 +110,8 @@ AtlasRegistrationMethod<TOutputPixel, TProbabilityPixel>
   // registrations
   if (m_TemplateFileName.length() == 0)
     itkExceptionMacro(<< "Template file name not specified");
-  if (m_ProbabilityFileNames.GetSize() < 1)
-    itkExceptionMacro(<< "No probability images specified");
+  if (m_ProbabilityDiretory.length() == 0)
+    itkExceptionMacro(<< "No probability dir specified");
   */
 
 }
@@ -326,21 +327,13 @@ AtlasRegistrationMethod<TOutputPixel, TProbabilityPixel>
 template <class TOutputPixel, class TProbabilityPixel>
 void
 AtlasRegistrationMethod<TOutputPixel, TProbabilityPixel>
-::SetProbabilityFileNames(StringList names)
+::SetProbabilityDirectory(const std::string& dir)
 {
-
-  unsigned int numProbabilities = names.GetSize();
-  if (numProbabilities == 0)
-  {
-    itkExceptionMacro(<< "No probability images");
-  }
-
-  m_ProbabilityFileNames = names;
+  m_ProbabilityDirectory = dir;
 
   m_DoneResample = false;
 
   m_Modified = true;
-
 }
 
 template <class TOutputPixel, class TProbabilityPixel>
@@ -735,13 +728,26 @@ AtlasRegistrationMethod<TOutputPixel, TProbabilityPixel>
   for (unsigned int i = 0; i < m_Probabilities.GetSize(); i++)
     m_Probabilities[i] = 0;
   m_Probabilities.Clear();
-  for (unsigned int i = 0; i < m_ProbabilityFileNames.GetSize(); i++)
+  unsigned int prIndex = 0;
+  while (true)
   {
-    muLogMacro(<< "Resampling atlas prior " << i+1 << "...\n");
+    ++prIndex;
+
+    muLogMacro(<< "Resampling atlas prior " << prIndex << "...\n");
 
     ReaderPointer reader = ReaderType::New();
-    reader->SetFileName(m_ProbabilityFileNames[i].c_str());
-    reader->Update();
+
+    try
+    {
+      std::ostringstream oss;
+      oss << m_ProbabilityDirectory << prIndex << ".mha" << std::ends;
+      reader->SetFileName(oss.str().c_str());
+      reader->Update();
+    }
+    catch (...)
+    {
+      break;
+    }
 
     InternalImagePointer prob_i = reader->GetOutput();
 
@@ -763,8 +769,9 @@ AtlasRegistrationMethod<TOutputPixel, TProbabilityPixel>
     resampler->SetDefaultPixelValue(0);
 
     resampler->Update();
-  
+
     m_Probabilities.Append(CopyProbabilityImage(resampler->GetOutput()));
+
   }
 
   if (m_Probabilities.GetSize() > 0)

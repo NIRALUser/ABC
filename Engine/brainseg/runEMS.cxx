@@ -177,7 +177,7 @@ runEMS(EMSParameters* emsp, bool debugflag, bool writemoreflag)
 
     atlasreg->SetSuffix(emsp->GetSuffix());
 
-    std::string templatefn = atlasdir + std::string("template.gipl");
+    std::string templatefn = atlasdir + std::string("template.mha");
     atlasreg->SetTemplateFileName(templatefn);
 
     atlasreg->SetAtlasOrientation(emsp->GetAtlasOrientation());
@@ -198,16 +198,8 @@ runEMS(EMSParameters* emsp, bool debugflag, bool writemoreflag)
     if (imagemapstr.compare("rigid") == 0)
       atlasreg->SetImageLinearTransformChoice(AtlasRegType::RIGID_TRANSFORM);
 
-    // Compute list of file names for the priors
-    DynArray<std::string> priorfnlist;
-    {
-      priorfnlist.Append(atlasdir + std::string("white.gipl"));
-      priorfnlist.Append(atlasdir + std::string("gray.gipl"));
-      priorfnlist.Append(atlasdir + std::string("csf.gipl"));
-      priorfnlist.Append(atlasdir + std::string("rest.gipl"));
-    }
-
-    atlasreg->SetProbabilityFileNames(priorfnlist);
+    // Directory with the priors
+    atlasreg->SetProbabilityDirectory(atlasdir);
 
     muLogMacro(<< "Attempting to read previous registration results..."
       << std::endl);

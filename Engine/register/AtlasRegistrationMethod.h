@@ -97,8 +97,9 @@ public:
   itkGetMacro(OutputDirectory, std::string);
   itkSetMacro(OutputDirectory, std::string);
 
+  void SetProbabilityDirectory(const std::string& dir);
+
   void SetTemplateFileName(std::string filename);
-  void SetProbabilityFileNames(StringList filenames);
   void SetImageFileNames(StringList filenames);
 
   void SetAtlasOrientation(std::string orient);
@@ -166,7 +167,7 @@ private:
   std::string m_OutputDirectory;
 
   std::string m_TemplateFileName;
-  StringList m_ProbabilityFileNames;
+  std::string m_ProbabilityDirectory;
   StringList m_ImageFileNames;
 
 // HACK

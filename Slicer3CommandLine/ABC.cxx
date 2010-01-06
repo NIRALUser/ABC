@@ -103,7 +103,7 @@ int run_ABC(int argc, char** argv)
     //TODO: allow parameter to set output names?
     atlasreg->SetSuffix("");
 
-    std::string templatefn = atlasDir + std::string("template.gipl");
+    std::string templatefn = atlasDir + std::string("template.mha");
     atlasreg->SetTemplateFileName(templatefn);
 
     atlasreg->SetAtlasOrientation(atlasOrient);
@@ -120,23 +120,13 @@ int run_ABC(int argc, char** argv)
     if (atlasmapstr.compare("rigid") == 0)
       atlasreg->SetAtlasLinearTransformChoice(AtlasRegType::RIGID_TRANSFORM);
 
-    //std::string imagemapstr = emsp->GetImageLinearMapType();
-    std::string imagemapstr("affine");
-    if (imagemapstr.compare("id") == 0)
+    if (coregMapType.compare("identity") == 0)
       atlasreg->SetImageLinearTransformChoice(AtlasRegType::ID_TRANSFORM);
-    if (imagemapstr.compare("rigid") == 0)
+    if (coregMapType.compare("rigid") == 0)
       atlasreg->SetImageLinearTransformChoice(AtlasRegType::RIGID_TRANSFORM);
 
-    // Compute list of file names for the priors
-    DynArray<std::string> priorfnlist;
-    {
-      priorfnlist.Append(atlasDir + std::string("white.gipl"));
-      priorfnlist.Append(atlasDir + std::string("gray.gipl"));
-      priorfnlist.Append(atlasDir + std::string("csf.gipl"));
-      priorfnlist.Append(atlasDir + std::string("rest.gipl"));
-    }
-
-    atlasreg->SetProbabilityFileNames(priorfnlist);
+    // Location of the priors (1.mha, 2.mha, ... 99.mha, ... etc)
+    atlasreg->SetProbabilityDirectory(atlasDir);
 
     // NOTE: always start from scratch in Slicer
     //muLogMacro(<< "Attempting to read previous registration results..."

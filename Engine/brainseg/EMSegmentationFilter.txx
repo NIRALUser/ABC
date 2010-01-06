@@ -231,14 +231,18 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
 
   itkDebugMacro(<< "SetPriorWeights");
 
-  if (w.size() != m_Priors.GetSize())
+  if (w.size() > m_Priors.GetSize())
     itkExceptionMacro(<< "Number of prior weights invalid");
 
+  m_PriorWeights = VectorType(m_Priors.GetSize());
+  m_PriorWeights.fill(1.0);
+
   for (unsigned i = 0; i < w.size() ; i++)
+  {
     if (w[i] == 0.0)
       itkExceptionMacro(<< "Prior weight " << i << " is zero");
-
-  m_PriorWeights = w;
+    m_PriorWeights[i] = w[i];
+  }
 
   m_InputModified = true;
 

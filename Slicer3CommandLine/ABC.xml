@@ -84,6 +84,15 @@ This work is part of the National Alliance for Medical Image Computing (NAMIC), 
     <longflag>--atlasOrient</longflag>
     </string>
 
+<!--
+    <float-vector>
+    <name>priorWeights</name>
+    <label>Weight adjustment for priors (1,1,1,..) </label>
+    <longflag>--priorWeights</longflag>
+    <default>1,1,1,1</default>
+    </float-vector>
+-->
+
   </parameters>
 <!-- --> 
   <parameters>
@@ -148,13 +157,24 @@ This work is part of the National Alliance for Medical Image Computing (NAMIC), 
     <name>biasDegree</name>
     <flag>b</flag>
     <longflag>--biasDegree</longflag>
-    <label>Bias Field Polynomial Degree</label>
+    <label>Bias Field Polynomial Degree (0 = off)</label>
     <default>4</default>
     </integer>
 
+    <string-enumeration>
+      <name>coregMapType</name>
+      <description>Type of transform to produce</description>
+      <label>Coregistration Transform Type</label>
+      <longflag>coregMapType</longflag>
+      <element>affine</element>
+      <element>rigid</element>
+      <element>identity</element>
+      <default>affine</default>
+    </string-enumeration>
+
     <integer-vector>
     <name>warpPoints</name>
-    <label>Warp Control Points</label>
+    <label>Warp Control Points (0,0,0 = off)</label>
     <flag>w</flag>
     <longflag>--warpPoints</longflag>
     <default>5,5,5</default>
