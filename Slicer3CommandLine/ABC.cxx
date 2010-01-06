@@ -157,12 +157,9 @@ int run_ABC(int argc, char** argv)
   segfilter->SetInputImages(images);
   segfilter->SetPriors(priors);
 
-  // TODO: make part of param as float-vector 1,1,1,1
-  SegFilterType::VectorType priorweights(4);
-  priorweights[0] = 1.0;
-  priorweights[1] = 1.0;
-  priorweights[2] = 1.0;
-  priorweights[3] = 1.0;
+  SegFilterType::VectorType priorweights(priorAdjustVec.size());
+  for (unsigned int i = 0; i < priorAdjustVec.size(); i++)
+    priorweights[i] = priorAdjustVec[i];
   segfilter->SetPriorWeights(priorweights);
 
   segfilter->SetMaxBiasDegree(biasDegree);
