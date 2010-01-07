@@ -113,11 +113,9 @@ int run_ABC(int argc, char** argv)
     // NOTE: trafo write should be disabled for Slicer
     atlasreg->SetOutputDirectory(std::string(""));
 
-    //std::string atlasmapstr = emsp->GetAtlasLinearMapType();
-    std::string atlasmapstr("affine");
-    if (atlasmapstr.compare("id") == 0)
+    if (atlasMapType.compare("identity") == 0)
       atlasreg->SetAtlasLinearTransformChoice(AtlasRegType::ID_TRANSFORM);
-    if (atlasmapstr.compare("rigid") == 0)
+    if (atlasMapType.compare("rigid") == 0)
       atlasreg->SetAtlasLinearTransformChoice(AtlasRegType::RIGID_TRANSFORM);
 
     if (coregMapType.compare("identity") == 0)

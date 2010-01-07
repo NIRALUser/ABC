@@ -160,6 +160,17 @@ This work is part of the National Alliance for Medical Image Computing (NAMIC), 
     </integer>
 
     <string-enumeration>
+      <name>atlasMapType</name>
+      <description>Type of linear transform for atlas mapping</description>
+      <label>Atlas Transform Type</label>
+      <longflag>--atlasMapType</longflag>
+      <element>affine</element>
+      <element>rigid</element>
+      <element>identity</element>
+      <default>affine</default>
+    </string-enumeration>
+
+    <string-enumeration>
       <name>coregMapType</name>
       <description>Type of transform to produce</description>
       <label>Coregistration Transform Type</label>
