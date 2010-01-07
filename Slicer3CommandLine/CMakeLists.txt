@@ -42,6 +42,7 @@ SET(ABC_SRCS
   ../Engine/register/PairRegistrationMethod_float.cxx
   ../Engine/register/PowellOptimizer.cxx
   ../Engine/register/SimulatedAnnealingOptimizer.cxx
+  ../Engine/robust/FastMCDSampleFilter.cxx
   ../Engine/robust/KruskalMSTClusteringProcess.cxx
   ../Engine/spr/KMeansEstimator.cxx
   ../Engine/brainseg/EMSegmentationFilter_float+float.cxx

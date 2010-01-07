@@ -30,7 +30,7 @@ EMSParameters
   m_AtlasWarpGridY = 5;
   m_AtlasWarpGridZ = 5;
 
-  m_PriorWeights = std::vector<double>(4, 1.0);
+  //m_PriorWeights = std::vector<double>(4, 1.0);
 
   m_AtlasLinearMapType = "affine";
   m_ImageLinearMapType = "affine";
