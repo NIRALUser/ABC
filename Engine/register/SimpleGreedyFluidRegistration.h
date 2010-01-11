@@ -32,7 +32,7 @@ public:
   typedef typename ImageType::PointType ImagePointType;
 
   typedef itk::Vector<float, Dimension> DisplacementType;
-  typedef itk::Image<DisplacementType, 3> DeformationFieldType;
+  typedef itk::Image<DisplacementType, Dimension> DeformationFieldType;
   typedef typename DeformationFieldType::Pointer DeformationFieldPointer;
 
   void SetFixedImages(const std::vector<ImagePointer>& images);

@@ -23,11 +23,13 @@ int main(int argc, char** argv)
   typedef itk::ImageFileReader<FloatImageType> ReaderType;
 
   int numChannels = (argc - 1) / 2;
+std::cout << numChannels << " channels" << std::endl;
 
   std::vector<FloatImageType::Pointer> fixedImages;
   for (int i = 0; i < numChannels; i++)
   {
     ReaderType::Pointer r = ReaderType::New();
+std::cout << "Fixed: " << argv[1+i] << std::endl;
     r->SetFileName(argv[1+i]);
     r->Update();
     fixedImages.push_back(r->GetOutput());
@@ -37,20 +39,30 @@ int main(int argc, char** argv)
   for (int i = 0; i < numChannels; i++)
   {
     ReaderType::Pointer r = ReaderType::New();
+std::cout << "Moving: " << argv[1+numChannels+i] << std::endl;
     r->SetFileName(argv[1+numChannels+i]);
     r->Update();
     movingImages.push_back(r->GetOutput());
   }
 
+std::cout << "Start fluid" << std::endl;
   typedef SimpleGreedyFluidRegistration<float, 3> FluidWarperType;
   FluidWarperType::Pointer fluid = FluidWarperType::New();
+try
+{
   fluid->SetFixedImages(fixedImages);
   fluid->SetMovingImages(movingImages);
   fluid->SetIterations(10);
   fluid->SetTimeStep(0.01);
   fluid->Update();
+}
+catch (...)
+{
+  std::cerr << "Exception in fluid" << std::endl;
+}
 
   std::vector<FloatImageType::Pointer> outImages = fluid->GetOutputImages();
+std::cout << "out: " << outImages.size() << " images" << std::endl;
 
   typedef itk::ImageFileWriter<ShortImageType> WriterType;
 

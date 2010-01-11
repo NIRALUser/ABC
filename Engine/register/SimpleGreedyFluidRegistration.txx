@@ -66,7 +66,11 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
 
   // Initialize phi(x) = x
   m_DeformationField = DeformationFieldType::New();
-  m_DeformationField->CopyInformation(m_FixedImages[0]);
+  //m_DeformationField->CopyInformation(m_FixedImages[0]);
+  m_DeformationField->SetDirection(m_FixedImages[0]->GetDirection());
+  m_DeformationField->SetOrigin(m_FixedImages[0]->GetOrigin());
+  m_DeformationField->SetSpacing(m_FixedImages[0]->GetSpacing());
+  m_DeformationField->SetRegions(m_FixedImages[0]->GetLargestPossibleRegion());
   m_DeformationField->Allocate();
 
   DisplacementType zerov;
@@ -75,6 +79,7 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
 
   typedef itk::ImageRegionIteratorWithIndex<DeformationFieldType> IteratorType;
   IteratorType it(m_DeformationField, m_DeformationField->GetLargestPossibleRegion());
+
   for (it.GoToBegin(); !it.IsAtEnd(); ++it)
   {
     ImagePointType p;
@@ -87,7 +92,11 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
   }
 
   for (unsigned int i = 0; i < m_Iterations; i++)
+  {
     this->Step();
+  }
+
+  m_Modified = false;
 }
 
 template <class TPixel, unsigned int Dimension>
@@ -103,7 +112,11 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
   // Compute velocity field
   // v = sum_c { (fixed_c - moving_c) * grad(moving_c) }
   DeformationFieldPointer velocF = DeformationFieldType::New();
-  velocF->CopyInformation(m_FixedImages[0]);
+  //velocF->CopyInformation(m_FixedImages[0]);
+  velocF->SetDirection(m_FixedImages[0]->GetDirection());
+  velocF->SetOrigin(m_FixedImages[0]->GetOrigin());
+  velocF->SetSpacing(m_FixedImages[0]->GetSpacing());
+  velocF->SetRegions(m_FixedImages[0]->GetLargestPossibleRegion());
   velocF->Allocate();
   velocF->FillBuffer(zerov);
 
