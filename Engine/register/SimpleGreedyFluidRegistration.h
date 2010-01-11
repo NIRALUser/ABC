@@ -30,6 +30,7 @@ public:
   typedef typename ImageType::IndexType ImageIndexType;
   typedef typename ImageType::Pointer ImagePointer;
   typedef typename ImageType::PointType ImagePointType;
+  typedef typename ImageType::SpacingType ImageSpacingType;
 
   typedef itk::Vector<float, Dimension> DisplacementType;
   typedef itk::Image<DisplacementType, Dimension> DeformationFieldType;
@@ -40,7 +41,7 @@ public:
 
   itkSetMacro(KernelWidth, double);
   itkSetMacro(Iterations, unsigned int);
-  itkSetMacro(TimeStep, double);
+  itkSetMacro(MaxStep, double);
 
   DeformationFieldPointer GetDeformationField()
   { if (m_Modified) this->Update(); return m_DeformationField; }
@@ -58,8 +59,10 @@ protected:
   void Step();
 
   unsigned int m_Iterations;
-  double m_TimeStep;
+  double m_MaxStep;
   double m_KernelWidth;
+
+  double m_Delta;
 
   std::vector<ImagePointer> m_FixedImages;
   std::vector<ImagePointer> m_MovingImages;

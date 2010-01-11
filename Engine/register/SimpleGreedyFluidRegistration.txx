@@ -16,7 +16,8 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
 ::SimpleGreedyFluidRegistration()
 {
   m_Iterations = 20;
-  m_TimeStep = 0.05;
+  m_MaxStep = 0.05;
+  m_Delta = 0.0;
   m_KernelWidth = 1.0;
   m_Modified = false;
 }
@@ -91,8 +92,11 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
     it.Set(v);
   }
 
+  m_Delta = 0.0;
+
   for (unsigned int i = 0; i < m_Iterations; i++)
   {
+std::cout << "Step " << i+1 << std::endl;
     this->Step();
   }
 
@@ -147,22 +151,47 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
           m_FixedImages[ichan]->GetPixel(ind) -
           m_OutputImages[ichan]->GetPixel(ind);
 
-        v[dim] += w * grad_d->GetPixel(ind) * m_TimeStep;
+        v[dim] += w * grad_d->GetPixel(ind);
 
         it.Set(v);
       }
     } // for dim
   } // for ichan
 
+  if (m_Delta == 0.0)
+  {
+    double maxVeloc = 0.0;
+    for (it.GoToBegin(); !it.IsAtEnd(); ++it)
+    {
+      DisplacementType v = it.Get();
+      double d = v.GetNorm();
+      if (d > maxVeloc)
+        maxVeloc = d;
+    }
+    m_Delta = m_MaxStep / maxVeloc;
+  }
+
+  for (it.GoToBegin(); !it.IsAtEnd(); ++it)
+  {
+    it.Set(it.Get() * m_Delta);
+  }
+
   // Apply Green's kernel to velocity field
   typedef VectorBlurImageFilter<DeformationFieldType, DeformationFieldType>
     DeformationSmootherType;
 
+  ImageSpacingType spacing = m_FixedImages[0]->GetSpacing();
+
+  double minSpacing = spacing[0];
+  for (int i = 1; i < Dimension; i++)
+    if (spacing[i] < minSpacing)
+      minSpacing = spacing[i];
+
   typename DeformationSmootherType::Pointer defsmoother = DeformationSmootherType::New();
   typename DeformationFieldType::SizeType radii;
-  radii.Fill(5);
+  radii.Fill(3);
   defsmoother->SetRadius(radii);
-  defsmoother->SetVariance(m_KernelWidth*m_KernelWidth);
+  defsmoother->SetVariance(m_KernelWidth*m_KernelWidth*minSpacing*minSpacing);
   defsmoother->SetInput(velocF);
   defsmoother->Update();
 
