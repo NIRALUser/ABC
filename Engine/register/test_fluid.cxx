@@ -52,8 +52,8 @@ try
 {
   fluid->SetFixedImages(fixedImages);
   fluid->SetMovingImages(movingImages);
-  fluid->SetIterations(2);
-  fluid->SetMaxStep(0.05);
+  fluid->SetIterations(20);
+  fluid->SetMaxStep(0.5);
   fluid->Update();
 }
 catch (...)
