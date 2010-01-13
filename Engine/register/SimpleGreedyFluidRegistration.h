@@ -1,8 +1,12 @@
 
 
-/*
+/*******************************************************************************
+
   Simplified greedy fluid warping with L2 norm
-*/
+  Can handle multimodal images, assuming the intensities are normalized
+
+*******************************************************************************/
+// prastawa@sci.utah.edu 1/2010
 
 #ifndef _SimpleGreedyFluidRegistration_h
 #define _SimpleGreedyFluidRegistration_h
@@ -10,7 +14,7 @@
 #include "itkImage.h"
 #include "itkVector.h"
 
-#include <vector>
+#include "DynArray.h"
 
 template <class TPixel, unsigned int Dimension>
 class SimpleGreedyFluidRegistration : public itk::Object
@@ -36,8 +40,13 @@ public:
   typedef itk::Image<DisplacementType, Dimension> DeformationFieldType;
   typedef typename DeformationFieldType::Pointer DeformationFieldPointer;
 
-  void SetFixedImages(const std::vector<ImagePointer>& images);
-  void SetMovingImages(const std::vector<ImagePointer>& images);
+  typedef itk::Image<unsigned char, Dimension> MaskType;
+  typedef typename MaskType::Pointer MaskPointer;
+
+  void SetFixedImages(const DynArray<ImagePointer>& images);
+  void SetMovingImages(const DynArray<ImagePointer>& images);
+
+  void SetMask(MaskPointer m);
 
   itkSetMacro(KernelWidth, double);
   itkSetMacro(Iterations, unsigned int);
@@ -45,8 +54,10 @@ public:
 
   DeformationFieldPointer GetDeformationField()
   { if (m_Modified) this->Update(); return m_DeformationField; }
+  DeformationFieldPointer GetDisplacementField()
+  { if (m_Modified) this->Update(); return m_DisplacementField; }
 
-  std::vector<ImagePointer> GetOutputImages()
+  DynArray<ImagePointer> GetOutputImages()
   { if (m_Modified) this->Update(); return m_OutputImages; }
 
   void Update();
@@ -64,17 +75,22 @@ protected:
 
   double m_Delta;
 
-  std::vector<ImagePointer> m_FixedImages;
-  std::vector<ImagePointer> m_MovingImages;
+  DynArray<ImagePointer> m_FixedImages;
+  DynArray<ImagePointer> m_MovingImages;
 
-  std::vector<ImagePointer> m_OutputImages;
+  MaskPointer m_Mask;
+
+  DynArray<ImagePointer> m_OutputImages;
 
   DeformationFieldPointer m_DeformationField;
+  DeformationFieldPointer m_DisplacementField;
 
   bool m_Modified;
 
 };
 
+#ifndef MU_MANUAL_INSTANTIATION
 #include "SimpleGreedyFluidRegistration.txx"
+#endif
 
 #endif

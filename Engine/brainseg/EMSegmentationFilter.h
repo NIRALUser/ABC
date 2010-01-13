@@ -18,6 +18,7 @@
 #include "itkArray.h"
 #include "itkImage.h"
 #include "itkObject.h"
+#include "itkVector.h"
 
 #include "vnl/vnl_matrix.h"
 #include "vnl/vnl_vector.h"
@@ -81,6 +82,10 @@ public:
   typedef typename ProbabilityImageType::SizeType ProbabilityImageSizeType;
   typedef typename ProbabilityImageType::SpacingType ProbabilityImageSpacingType;
 
+  typedef itk::Vector<float, 3> DisplacementType;
+  typedef itk::Image<DisplacementType, 3> DeformationFieldType;
+  typedef typename DeformationFieldType::Pointer DeformationFieldPointer;
+
   typedef vnl_vector<double> VectorType;
   typedef vnl_matrix<double> MatrixType;
   typedef vnl_matrix_inverse<double> MatrixInverseType;
@@ -136,6 +141,7 @@ public:
   void WarpingOff() { m_DoWarp = false; }
 
   itkGetMacro(TemplateBSplineTransform, BSplineTransformPointer);
+  itkGetMacro(TemplateFluidDeformation, DeformationFieldPointer);
 
   itkGetMacro(WarpedTemplateImage, InputImagePointer);
 
@@ -143,6 +149,8 @@ public:
   { m_WarpGrid[0] = g[0]; m_WarpGrid[1] = g[1]; m_WarpGrid[2] = g[2]; }
   void SetWarpGrid(unsigned int gx, unsigned int gy, unsigned int gz)
   { m_WarpGrid[0] = gx; m_WarpGrid[1] = gy; m_WarpGrid[2] = gz; }
+
+  itkSetMacro(WarpFluidIterations, unsigned int);
 
 protected:
 
@@ -222,6 +230,10 @@ private:
   BSplineTransformPointer m_TemplateBSplineTransform;
 
   unsigned int m_WarpGrid[3];
+
+  DeformationFieldPointer m_TemplateFluidDeformation;
+
+  unsigned int m_WarpFluidIterations;
 
   double m_WarpLikelihoodTolerance;
 

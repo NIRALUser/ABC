@@ -15,8 +15,8 @@ template <class TPixel, unsigned int Dimension>
 SimpleGreedyFluidRegistration<TPixel, Dimension>
 ::SimpleGreedyFluidRegistration()
 {
-  m_Iterations = 20;
-  m_MaxStep = 0.05;
+  m_Iterations = 10;
+  m_MaxStep = 0.5;
   m_Delta = 0.0;
   m_KernelWidth = 1.0;
   m_Modified = false;
@@ -31,7 +31,7 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
 template <class TPixel, unsigned int Dimension>
 void
 SimpleGreedyFluidRegistration<TPixel, Dimension>
-::SetFixedImages(const std::vector<ImagePointer>& images)
+::SetFixedImages(const DynArray<ImagePointer>& images)
 {
   m_FixedImages = images;
   m_Modified = true;
@@ -40,9 +40,18 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
 template <class TPixel, unsigned int Dimension>
 void
 SimpleGreedyFluidRegistration<TPixel, Dimension>
-::SetMovingImages(const std::vector<ImagePointer>& images)
+::SetMovingImages(const DynArray<ImagePointer>& images)
 {
   m_MovingImages = images;
+  m_Modified = true;
+}
+
+template <class TPixel, unsigned int Dimension>
+void
+SimpleGreedyFluidRegistration<TPixel, Dimension>
+::SetMask(MaskPointer m)
+{
+  m_Mask = m;
   m_Modified = true;
 }
 
@@ -55,14 +64,14 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
     return;
 
   // Initialize out = input moving
-  m_OutputImages.clear();
-  for (unsigned int c = 0; c < m_MovingImages.size(); c++)
+  m_OutputImages.Clear();
+  for (unsigned int c = 0; c < m_MovingImages.GetSize(); c++)
   {
     typedef itk::ImageDuplicator<ImageType> DuperType;
     typename DuperType::Pointer dupef = DuperType::New();
     dupef->SetInputImage(m_MovingImages[c]);
     dupef->Update();
-    m_OutputImages.push_back(dupef->GetOutput());
+    m_OutputImages.Append(dupef->GetOutput());
   }
 
   // Initialize phi(x) = x
@@ -92,11 +101,22 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
     it.Set(v);
   }
 
+  // Store displacement field as well
+  m_DisplacementField = DeformationFieldType::New();
+  //m_DisplacementField->CopyInformation(m_FixedImages[0]);
+  m_DisplacementField->SetDirection(m_FixedImages[0]->GetDirection());
+  m_DisplacementField->SetOrigin(m_FixedImages[0]->GetOrigin());
+  m_DisplacementField->SetSpacing(m_FixedImages[0]->GetSpacing());
+  m_DisplacementField->SetRegions(m_FixedImages[0]->GetLargestPossibleRegion());
+  m_DisplacementField->Allocate();
+  m_DisplacementField->FillBuffer(zerov);
+
+  // Initialize delta
   m_Delta = 0.0;
 
+  // Greedy optimization
   for (unsigned int i = 0; i < m_Iterations; i++)
   {
-std::cout << "Step " << i+1 << std::endl;
     this->Step();
   }
 
@@ -108,7 +128,14 @@ void
 SimpleGreedyFluidRegistration<TPixel, Dimension>
 ::Step()
 {
-  unsigned int numChannels = m_FixedImages.size();
+  unsigned int numChannels = m_FixedImages.GetSize();
+
+  // Find scale adjustment
+  ImageSpacingType spacing = m_FixedImages[0]->GetSpacing();
+  double minSpacing = spacing[0];
+  for (unsigned int i = 1; i < Dimension; i++)
+    if (spacing[i] < minSpacing)
+      minSpacing = spacing[i];
 
   DisplacementType zerov;
   zerov.Fill(0.0);
@@ -142,11 +169,14 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
 
       ImagePointer grad_d = derivf->GetOutput();
 
+// TODO: use mask?
+
       for (it.GoToBegin(); !it.IsAtEnd(); ++it)
       {
         DisplacementType v = it.Get();
 
         ImageIndexType ind = it.GetIndex();
+
         double w =
           m_FixedImages[ichan]->GetPixel(ind) -
           m_OutputImages[ichan]->GetPixel(ind);
@@ -168,7 +198,7 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
       if (d > maxVeloc)
         maxVeloc = d;
     }
-    m_Delta = m_MaxStep / maxVeloc;
+    m_Delta = m_MaxStep * minSpacing / maxVeloc;
   }
 
   for (it.GoToBegin(); !it.IsAtEnd(); ++it)
@@ -180,18 +210,13 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
   typedef VectorBlurImageFilter<DeformationFieldType, DeformationFieldType>
     DeformationSmootherType;
 
-  ImageSpacingType spacing = m_FixedImages[0]->GetSpacing();
-
-  double minSpacing = spacing[0];
-  for (int i = 1; i < Dimension; i++)
-    if (spacing[i] < minSpacing)
-      minSpacing = spacing[i];
+  double adjustedWidth = m_KernelWidth * minSpacing;
 
   typename DeformationSmootherType::Pointer defsmoother = DeformationSmootherType::New();
   typename DeformationFieldType::SizeType radii;
-  radii.Fill(3);
+  radii.Fill(2);
   defsmoother->SetRadius(radii);
-  defsmoother->SetVariance(m_KernelWidth*m_KernelWidth*minSpacing*minSpacing);
+  defsmoother->SetVariance(adjustedWidth * adjustedWidth);
   defsmoother->SetInput(velocF);
   defsmoother->Update();
 
@@ -212,7 +237,6 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
 
   m_DeformationField = compf->GetOutput();
 
-  DeformationFieldPointer dispF = defsmoother->GetOutput();
   for (it.GoToBegin(); !it.IsAtEnd(); ++it)
   {
     ImageIndexType ind = it.GetIndex();
@@ -223,11 +247,12 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
     DisplacementType u;
     for (unsigned int i = 0; i < Dimension; i++)
       u[i] = p[i];
-    dispF->SetPixel(ind, m_DeformationField->GetPixel(ind) - u);
+    m_DisplacementField->SetPixel(ind,
+      m_DeformationField->GetPixel(ind) - u);
   }
 
   // Warp images
-  m_OutputImages.clear();
+  m_OutputImages.Clear();
   for (unsigned int ichan = 0; ichan < numChannels; ichan++)
   {
     typedef itk::WarpImageFilter<
@@ -235,12 +260,12 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
       WarperType;
     typename WarperType::Pointer warpf = WarperType::New();
     warpf->SetInput(m_MovingImages[ichan]);
-    warpf->SetDeformationField(dispF);
+    warpf->SetDeformationField(m_DisplacementField);
     warpf->SetOutputDirection(m_DeformationField->GetDirection());
     warpf->SetOutputOrigin(m_DeformationField->GetOrigin());
     warpf->SetOutputSpacing(m_DeformationField->GetSpacing());
     warpf->Update();
-    m_OutputImages.push_back(warpf->GetOutput());
+    m_OutputImages.Append(warpf->GetOutput());
   }
 }
 

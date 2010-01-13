@@ -467,6 +467,9 @@ runEMS(EMSParameters* emsp, bool debugflag, bool writemoreflag)
     writer->UseCompressionOn();
     writer->Update();
 
+//TODO
+// write fluid warps
+/*
     fn =
       outdir + mu::get_name((emsp->GetImages()[0]).c_str()) +
       std::string("_to_template") + 
@@ -475,6 +478,7 @@ runEMS(EMSParameters* emsp, bool debugflag, bool writemoreflag)
     PairRegistrationMethod<float>::WriteBSplineTransform(
       fn.c_str(), segfilter->GetTemplateBSplineTransform());
 
+*/
   }
 
   timer->Stop();

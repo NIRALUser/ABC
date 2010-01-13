@@ -11,6 +11,7 @@
 #include "itkBSplineDownsampleImageFilter.h"
 #include "itkNumericTraits.h"
 #include "itkResampleImageFilter.h"
+#include "itkWarpImageFilter.h"
 
 #include "vnl/algo/vnl_determinant.h"
 #include "vnl/vnl_math.h"
@@ -22,6 +23,8 @@
 
 #include "FastMCDSampleFilter.h"
 #include "KruskalMSTClusteringProcess.h"
+
+#include "SimpleGreedyFluidRegistration.h"
 
 #include <iostream>
 
@@ -67,6 +70,8 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
   m_WarpGrid[0] = 5;
   m_WarpGrid[1] = 5;
   m_WarpGrid[2] = 5;
+
+  m_WarpFluidIterations = 10;
 
 }
 
@@ -1911,6 +1916,8 @@ void
 EMSegmentationFilter <TInputImage, TProbabilityImage>
 ::DoWarping()
 {
+
+#if 0
   muLogMacro(<< "Computing B-spline transform, with grid "
    << m_WarpGrid[0] << " x " << m_WarpGrid[1] << " x " << m_WarpGrid[2]
    << "...\n");
@@ -1991,6 +1998,98 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
 
     m_Priors[k] = warper->GetOutput();
   }
+#endif
+
+  muLogMacro(<< "Computing fluid warping with " << m_WarpFluidIterations
+    << " iterations\n");
+
+  if (m_WarpFluidIterations == 0)
+    return;
+
+  unsigned int numPriors = m_OriginalPriors.GetSize();
+  unsigned int numClasses = m_Posteriors.GetSize();
+
+  typedef itk::ImageRegionIteratorWithIndex<ProbabilityImageType> 
+    IteratorType;
+
+  // Create prior images by compounding relevant posteriors
+  DynArray<ProbabilityImagePointer> subjectPriors;
+  for (unsigned int i = 0; i < (numPriors-1); i++)
+  {
+    // Subject prior = sum of all class components
+
+    ProbabilityImagePointer tmp = ProbabilityImageType::New(); 
+    tmp->CopyInformation(m_Posteriors[0]);
+    tmp->Allocate();
+    tmp->FillBuffer(0);
+
+    IteratorType it(tmp, tmp->GetLargestPossibleRegion());
+
+    for (unsigned int iclass = 0; iclass < numClasses; iclass++)
+    {
+      if (m_PriorLookupTable[iclass] != i)
+        continue;
+      for (it.GoToBegin(); !it.IsAtEnd(); ++it)
+        it.Set( it.Get() + m_Posteriors[iclass]->GetPixel(it.GetIndex()) );
+    }
+
+    subjectPriors.Append(tmp);
+  }
+
+  DynArray<ProbabilityImagePointer> atlasPriors;
+  for (unsigned int i = 0; i < (numPriors-1); i++)
+  {
+    atlasPriors.Append(m_OriginalPriors[i]);
+  }
+
+  typedef SimpleGreedyFluidRegistration<ProbabilityImagePixelType, 3>
+    FluidWarperType;
+  typename FluidWarperType::Pointer fluid = FluidWarperType::New();
+
+  fluid->SetFixedImages(subjectPriors);
+  fluid->SetMovingImages(m_OriginalPriors);
+  //fluid->SetMask(m_OriginalMask);
+  fluid->SetIterations(m_WarpFluidIterations);
+  fluid->SetMaxStep(0.5);
+  fluid->Update();
+
+  m_Priors = fluid->GetOutputImages();
+
+  m_TemplateFluidDeformation = fluid->GetDisplacementField();
+
+  // Don't compute last prior since it is 1 - all other warped priors at the end
+  ProbabilityImagePointer lastPrior = ProbabilityImageType::New();
+  lastPrior->CopyInformation(m_Priors[0]);
+  lastPrior->Allocate();
+
+  IteratorType it(lastPrior, lastPrior->GetLargestPossibleRegion());
+  for (it.GoToBegin(); !it.IsAtEnd(); ++it)
+  {
+    ProbabilityImageIndexType ind = it.GetIndex();
+    double sump = 0;
+    for (unsigned int i = 0; i < m_Priors.GetSize(); i++)
+      sump += m_Priors[i]->GetPixel(ind);
+    double p = 1.0 - sump;
+    if (p < 0)
+      p = 0;
+    it.Set(p);
+  }
+
+  m_Priors.Append(lastPrior);
+
+  // warp the template image
+  typedef itk::WarpImageFilter<
+    InputImageType, InputImageType, DeformationFieldType>
+    WarperType;
+  typename WarperType::Pointer warpf = WarperType::New();
+  warpf->SetInput(m_TemplateImage);
+  warpf->SetDeformationField(m_TemplateFluidDeformation);
+  warpf->SetOutputDirection(m_TemplateImage->GetDirection());
+  warpf->SetOutputOrigin(m_TemplateImage->GetOrigin());
+  warpf->SetOutputSpacing(m_TemplateImage->GetSpacing());
+  warpf->Update();
+
+  m_WarpedTemplateImage = warpf->GetOutput();
 
 }
 
