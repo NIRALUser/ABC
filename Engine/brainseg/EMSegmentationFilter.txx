@@ -2020,6 +2020,7 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
 
     ProbabilityImagePointer tmp = ProbabilityImageType::New(); 
     tmp->CopyInformation(m_Posteriors[0]);
+    tmp->SetRegions(m_Posteriors[0]->GetLargestPossibleRegion());
     tmp->Allocate();
     tmp->FillBuffer(0);
 
@@ -2046,6 +2047,8 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
     FluidWarperType;
   typename FluidWarperType::Pointer fluid = FluidWarperType::New();
 
+//TODO: downsample input images and upsample deformation?
+
   fluid->SetFixedImages(subjectPriors);
   fluid->SetMovingImages(m_OriginalPriors);
   //fluid->SetMask(m_OriginalMask);
@@ -2059,7 +2062,8 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
 
   // Don't compute last prior since it is 1 - all other warped priors at the end
   ProbabilityImagePointer lastPrior = ProbabilityImageType::New();
-  lastPrior->CopyInformation(m_Priors[0]);
+  lastPrior->CopyInformation(m_OriginalPriors[0]);
+  lastPrior->SetRegions(m_OriginalPriors[0]->GetLargestPossibleRegion());
   lastPrior->Allocate();
 
   IteratorType it(lastPrior, lastPrior->GetLargestPossibleRegion());
