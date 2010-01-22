@@ -24,6 +24,7 @@
 #include "FastMCDSampleFilter.h"
 #include "KruskalMSTClusteringProcess.h"
 
+#include "IntensityMatcher.h"
 #include "SimpleGreedyFluidRegistration.h"
 
 #include <iostream>
@@ -90,6 +91,7 @@ void
 EMSegmentationFilter <TInputImage, TProbabilityImage>
 ::CheckInput()
 {
+  itkDebugMacro(<< "CheckInput");
 
   if (m_MaximumIterations == 0)
     itkExceptionMacro(<< "Maximum iterations set to zero");
@@ -423,6 +425,8 @@ void
 EMSegmentationFilter <TInputImage, TProbabilityImage>
 ::Update()
 {
+  itkDebugMacro(<< "Update");
+
   if (!m_InputModified)
     return;
 
@@ -503,10 +507,10 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
     for (ind[1] = 0; ind[1] < (long)size[1]; ind[1]++)
       for (ind[0] = 0; ind[0] < (long)size[0]; ind[0]++)
       {
-        double tmp = 0;
+        double sumP = 0;
         for (unsigned int iprior = 0; iprior < (numPriors-1); iprior++)
-          tmp += m_Priors[iprior]->GetPixel(ind);
-        if (tmp > 0)
+          sumP += m_Priors[iprior]->GetPixel(ind);
+        if (sumP > 0)
           m_Mask->SetPixel(ind, 1);
         else
           m_Mask->SetPixel(ind, 0);
@@ -533,7 +537,7 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
       StructElementType> DilateType;
 
   StructElementType structel;
-  structel.SetRadius(2);
+  structel.SetRadius(7);
   structel.CreateStructuringElement();
 
   typename DilateType::Pointer dil = DilateType::New();
@@ -543,14 +547,7 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
 
   dil->Update();
 
-  ByteImagePointer dilmask = dil->GetOutput();
-
-  for (ind[2] = 0; ind[2] < (long)size[2]; ind[2]++)
-    for (ind[1] = 0; ind[1] < (long)size[1]; ind[1]++)
-      for (ind[0] = 0; ind[0] < (long)size[0]; ind[0]++)
-      {
-        m_Mask->SetPixel(ind, dilmask->GetPixel(ind));
-      }
+  m_Mask = dil->GetOutput();
 
 }
 
@@ -559,6 +556,7 @@ void
 EMSegmentationFilter <TInputImage, TProbabilityImage>
 ::ComputeDistributions()
 {
+  itkDebugMacro(<< "ComputeDistributions");
 
   unsigned numChannels = m_InputImages.GetSize();
   unsigned numPriors = m_Priors.GetSize();
@@ -712,6 +710,7 @@ void
 EMSegmentationFilter <TInputImage, TProbabilityImage>
 ::ComputeDistributionsRobust()
 {
+  itkDebugMacro(<< "ComputeDistributionsRobust");
 
   unsigned numChannels = m_InputImages.GetSize();
   unsigned numPriors = m_Priors.GetSize();
@@ -756,7 +755,7 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
   }
 
   // Compute means
-  m_Means = MatrixType(numChannels, numClasses);
+  m_Means = MatrixType(numChannels, numClasses, 0.0);
   for (unsigned int iclass = 0; iclass < numClasses; iclass++)
   {
     // Get samples with high probability
@@ -791,8 +790,8 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
       selectMask[i] = 0;
 
     unsigned int numSamples = numPossibleSamples / 2 + 1;
-    if (numSamples > 1000000)
-      numSamples = 1000000;
+    if (numSamples > 100000)
+      numSamples = 100000;
 
     MersenneTwisterRNG* rng = MersenneTwisterRNG::GetGlobalInstance();
 
@@ -844,7 +843,7 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
 
     mcdf.SetChangeTolerance(1e-4);
     mcdf.SetCoverFraction(0.5);
-    mcdf.SetNumberOfStarts(1000);
+    mcdf.SetNumberOfStarts(100);
     mcdf.SetMaxCStepIterations(10);
 
     FastMCDSampleFilter::VectorType mu;
@@ -857,10 +856,6 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
       m_Means(ichan, iclass) = mu[ichan];
 
   } // end means loop
-
-  // Fix mean of last class to zero vector (background)
-  for (unsigned int ichan = 0; ichan < numChannels; ichan++)
-    m_Means(ichan, numClasses-1) = 0;
 
   // Compute covariances
   DynArray<MatrixType> oldCovariances = m_Covariances;
@@ -879,7 +874,7 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
   for (unsigned int iclass = 0; iclass < numClasses; iclass++)
   {
 
-    MatrixType covtmp(numChannels, numChannels);
+    MatrixType covtmp(numChannels, numChannels, 0.0);
 
     for (unsigned int r = 0; r < numChannels; r++)
     {
@@ -939,6 +934,7 @@ void
 EMSegmentationFilter <TInputImage, TProbabilityImage>
 ::SplitPriorMST(unsigned int iprior)
 {
+  itkDebugMacro(<< "SplitPriorMST(" << iprior << ")");
 
   unsigned int numChannels = m_InputImages.GetSize();
   unsigned int numPriors = m_Priors.GetSize();
@@ -1209,6 +1205,7 @@ void
 EMSegmentationFilter <TInputImage, TProbabilityImage>
 ::SplitPrior(unsigned int iprior)
 {
+  itkDebugMacro(<< "SplitPrior(" << iprior << ")");
 
   unsigned int numChannels = m_InputImages.GetSize();
   unsigned int numPriors = m_Priors.GetSize();
@@ -1251,7 +1248,6 @@ void
 EMSegmentationFilter <TInputImage, TProbabilityImage>
 ::ComputePosteriors(bool fullRes)
 {
-
   itkDebugMacro(<< "ComputePosteriors");
 
   unsigned numChannels = m_InputImages.GetSize();
@@ -1290,6 +1286,8 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
     ProbabilityImagePointer post = m_Posteriors[iclass];
     ProbabilityImagePointer prior = m_Priors[iprior];
 
+    post->FillBuffer(0);
+
     double priorScale =
       m_PriorWeights[iprior] / m_NumberOfGaussians[iprior];
 
@@ -1312,10 +1310,7 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
         for (ind[0] = 0; ind[0] < (long)size[0]; ind[0] += skips[0])
         {
           if (m_Mask->GetPixel(ind) == 0)
-          {
-            post->SetPixel(ind, 0);
             continue;
-          }
 
           MatrixType X(numChannels, 1);
           for (unsigned int ichan = 0; ichan < numChannels; ichan++)
@@ -1393,6 +1388,8 @@ void
 EMSegmentationFilter <TInputImage, TProbabilityImage>
 ::EMLoop()
 {
+
+  itkDebugMacro(<< "EMLoop");
 
   unsigned int numChannels = m_InputImages.GetSize();
   unsigned int numPriors = m_Priors.GetSize();
@@ -1493,6 +1490,7 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
 
   // Compute initial distribution parameters
   this->ComputeDistributionsRobust();
+  refMean = m_Means.get_column(0);
 
   // Split distributions with the same prior
   muLogMacro(<< "Splitting distributions with same prior\n");
@@ -1508,11 +1506,13 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
   }
 
   // Update posteriors using the initial distribution parameters
-  this->ComputePosteriors(false);
+//PP
+  //this->ComputePosteriors(false);
+  this->ComputePosteriors(true);
 
   // Initialize warping vars
   m_WarpedTemplateImage = m_TemplateImage;
-  // TODO: zero B-spline??
+  m_TemplateFluidDeformation = 0;
 
   //double logLikelihood = vnl_huge_val(1.0);
   double logLikelihood = 1.0 / vnl_math::eps;
@@ -1583,8 +1583,10 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
     // Update distribution parameters after bias correction
     this->ComputeDistributions();
 
+//PP
     // Recompute posteriors, not at full resolution
-    this->ComputePosteriors(false);
+    //this->ComputePosteriors(false);
+    this->ComputePosteriors(true);
 
     double prevLogLikelihood = logLikelihood;
     if (prevLogLikelihood == 0)
@@ -1916,6 +1918,7 @@ void
 EMSegmentationFilter <TInputImage, TProbabilityImage>
 ::DoWarping()
 {
+  itkDebugMacro(<< "DoWarping");
 
 #if 0
   muLogMacro(<< "Computing B-spline transform, with grid "
@@ -1998,6 +2001,9 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
 
     m_Priors[k] = warper->GetOutput();
   }
+
+  // Update mask
+  this->ComputeMask();
 #endif
 
   muLogMacro(<< "Computing fluid warping with " << m_WarpFluidIterations
@@ -2015,6 +2021,7 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
   // Create prior images by compounding relevant posteriors
   DynArray<ProbabilityImagePointer> subjectPriors;
   for (unsigned int i = 0; i < (numPriors-1); i++)
+  //for (unsigned int i = 0; i < numPriors; i++)
   {
     // Subject prior = sum of all class components
 
@@ -2037,8 +2044,19 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
     subjectPriors.Append(tmp);
   }
 
+  // Make subject 1st channel intensities similar to template
+  typedef IntensityMatcher<InputImageType, ProbabilityImageType> MatcherType;
+  typename MatcherType::Pointer matcher = MatcherType::New();
+  matcher->SetSourceImage(m_CorrectedImages[0]);
+  matcher->SetTargetImage(m_WarpedTemplateImage);
+  //matcher->SetProbabilities(m_Posteriors);
+  matcher->SetProbabilities(subjectPriors);
+  matcher->Update();
+  InputImagePointer matchImg = matcher->GetOutput();
+
   DynArray<ProbabilityImagePointer> atlasPriors;
   for (unsigned int i = 0; i < (numPriors-1); i++)
+  //for (unsigned int i = 0; i < numPriors; i++)
   {
     atlasPriors.Append(m_OriginalPriors[i]);
   }
@@ -2049,17 +2067,31 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
 
 //TODO: downsample input images and upsample deformation?
 
-  fluid->SetFixedImages(subjectPriors);
-  fluid->SetMovingImages(m_OriginalPriors);
+// If using probabilities
+  //fluid->SetFixedImages(subjectPriors);
+  //fluid->SetMovingImages(atlasPriors);
+
+// If using matched modalities
+  DynArray<InputImagePointer> fixedSet;
+  fixedSet.Append(matchImg);
+  fluid->SetFixedImages(fixedSet);
+  DynArray<InputImagePointer> movingSet;
+  movingSet.Append(m_WarpedTemplateImage);
+  fluid->SetMovingImages(movingSet);
+
+  fluid->SetInitialDisplacementField(m_TemplateFluidDeformation);
   //fluid->SetMask(m_OriginalMask);
   fluid->SetIterations(m_WarpFluidIterations);
-  fluid->SetMaxStep(0.5);
+  fluid->SetMaxStep(1.0);
+  fluid->SetKernelWidth(2.0);
+  fluid->SetKernelRadius(3);
   fluid->Update();
 
-  m_Priors = fluid->GetOutputImages();
+  //m_Priors = fluid->GetOutputImages();
 
   m_TemplateFluidDeformation = fluid->GetDisplacementField();
 
+/*
   // Don't compute last prior since it is 1 - all other warped priors at the end
   ProbabilityImagePointer lastPrior = ProbabilityImageType::New();
   lastPrior->CopyInformation(m_OriginalPriors[0]);
@@ -2080,8 +2112,28 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
   }
 
   m_Priors.Append(lastPrior);
+*/
 
-  // warp the template image
+  m_Priors.Clear();
+  for (unsigned int i = 0; i < numPriors; i++)
+  {
+    typedef itk::WarpImageFilter<
+      ProbabilityImageType, ProbabilityImageType, DeformationFieldType>
+      WarperType;
+    typename WarperType::Pointer warpf = WarperType::New();
+    warpf->SetInput(m_OriginalPriors[i]);
+    warpf->SetDeformationField(m_TemplateFluidDeformation);
+    warpf->SetOutputDirection(m_OriginalPriors[i]->GetDirection());
+    warpf->SetOutputOrigin(m_OriginalPriors[i]->GetOrigin());
+    warpf->SetOutputSpacing(m_OriginalPriors[i]->GetSpacing());
+    warpf->Update();
+    m_Priors.Append(warpf->GetOutput());
+  }
+
+  // Update mask
+  this->ComputeMask();
+
+  // Warp the template image
   typedef itk::WarpImageFilter<
     InputImageType, InputImageType, DeformationFieldType>
     WarperType;

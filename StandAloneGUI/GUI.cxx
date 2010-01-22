@@ -257,17 +257,17 @@ Fl_Menu_Item GUI::menu_[] = {
 Fl_Double_Window* GUI::MakeWindow() {
   { aboutwindow = new Fl_Double_Window(612, 668, "ABC: About");
     aboutwindow->user_data((void*)(this));
-    { Fl_Box* o = new Fl_Box(5, 5, 600, 600, "\nABC (Atlas Based Classification) GUI v1.0\nNormal brain segmentation from M\
-RI\n\nMarcel Prastawa\nprastawa@@sci.utah.edu\nhttp://www.sci.utah.edu/~prasta\
-wa\n\nThis software is provided for research purposes only\n\nImplemented usin\
-g FLTK and ITK\nhttp://www.fltk.org\nhttp://www.itk.org\n\nBased on the follow\
-ing papers:\n\nMaes, F., Collignon, A., Vandermeulen, D., Marchal, G., Suetens\
-, P. \nMultimodality image registration by maximization of mutual information.\
-\nIEEE TMI 1997; 16(2):187-198\n\nVan Leemput K, Maes F, Vandermeulen D, Suete\
-ns P. Automated model based\ntissue classification of MR images of the brain. \
-IEEE TMI 1999; 18:897-908\n\nVan Leemput K, Maes F, Vandermeulen D, Suetens P.\
- Automated model based\nbias field correction of MR images of the brain. IEEE \
-TMI 1999; 18:885-896\n");
+    { Fl_Box* o = new Fl_Box(5, 5, 600, 600, "\r\nABC (Atlas Based Classification) GUI v1.0\r\nNormal brain segmentation fr\
+om MRI\r\n\r\nMarcel Prastawa\r\nprastawa@@sci.utah.edu\r\nhttp://www.sci.utah\
+.edu/~prastawa\r\n\r\nThis software is provided for research purposes only\r\n\
+\r\nImplemented using FLTK and ITK\r\nhttp://www.fltk.org\r\nhttp://www.itk.or\
+g\r\n\r\nBased on the following papers:\r\n\r\nMaes, F., Collignon, A., Vander\
+meulen, D., Marchal, G., Suetens, P. \r\nMultimodality image registration by m\
+aximization of mutual information.\r\nIEEE TMI 1997; 16(2):187-198\r\n\r\nVan \
+Leemput K, Maes F, Vandermeulen D, Suetens P. Automated model based\r\ntissue \
+classification of MR images of the brain. IEEE TMI 1999; 18:897-908\r\n\r\nVan\
+ Leemput K, Maes F, Vandermeulen D, Suetens P. Automated model based\r\nbias f\
+ield correction of MR images of the brain. IEEE TMI 1999; 18:885-896\r\n");
       o->box(FL_FLAT_BOX);
       o->color((Fl_Color)26);
       o->align(FL_ALIGN_TOP_LEFT|FL_ALIGN_INSIDE);
@@ -294,7 +294,7 @@ TMI 1999; 18:885-896\n");
     } // Fl_Box* o
     runwindow->end();
   } // Fl_Double_Window* runwindow
-  { mainwindow = new Fl_Double_Window(600, 538, "ABC");
+  { mainwindow = new Fl_Double_Window(600, 535, "ABC");
     mainwindow->user_data((void*)(this));
     { Fl_Tabs* o = new Fl_Tabs(0, 35, 620, 500);
       o->box(FL_UP_BOX);
@@ -318,7 +318,7 @@ TMI 1999; 18:885-896\n");
           o->color((Fl_Color)175);
           o->align(FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
         } // Fl_Box* o
-        { Fl_Box* o = new Fl_Box(25, 319, 580, 30, "Prior weight adjustments (space separated)");
+        { Fl_Box* o = new Fl_Box(25, 319, 580, 30, "Prior weight adjustments (space separated, e.g. 1 1 1 1)");
           o->box(FL_FLAT_BOX);
           o->color((Fl_Color)175);
           o->align(FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
@@ -343,12 +343,8 @@ TMI 1999; 18:885-896\n");
           o->color((Fl_Color)175);
           o->align(FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
         } // Fl_Box* o
-        { warpInput_nx = new Fl_Input(261, 429, 40, 30, "Grid size:");
-        } // Fl_Input* warpInput_nx
-        { warpInput_ny = new Fl_Input(320, 429, 40, 30, "X");
-        } // Fl_Input* warpInput_ny
-        { warpInput_nz = new Fl_Input(376, 430, 40, 30, "X");
-        } // Fl_Input* warpInput_nz
+        { fluidItersInput = new Fl_Input(303, 429, 40, 30, "Fluid iterations:");
+        } // Fl_Input* fluidItersInput
         tab1->end();
       } // Fl_Group* tab1
       { tab2 = new Fl_Group(10, 65, 595, 450, "Step 2");
@@ -513,9 +509,7 @@ p->SetMaxBiasDegree(atoi(biasDegreeInput->value()));
 
 p->SetDoAtlasWarp(warpAtlasButton->value() != 0);
 
-p->SetAtlasWarpGridX(atoi(warpInput_nx->value()));
-p->SetAtlasWarpGridY(atoi(warpInput_ny->value()));
-p->SetAtlasWarpGridZ(atoi(warpInput_nz->value()));
+p->SetAtlasWarpFluidIterations(atoi(fluidItersInput->value()));
 
 return p;
 }
@@ -585,19 +579,7 @@ warpAtlasButton->value(p->GetDoAtlasWarp());
 
 {
 std::stringstream oss;
-oss << p->GetAtlasWarpGridX() << std::ends;
-warpInput_nx->value(oss.str().c_str());
-}
-
-{
-std::stringstream oss;
-oss << p->GetAtlasWarpGridY() << std::ends;
-warpInput_ny->value(oss.str().c_str());
-}
-
-{
-std::stringstream oss;
-oss << p->GetAtlasWarpGridZ() << std::ends;
-warpInput_nz->value(oss.str().c_str());
+oss << p->GetAtlasWarpFluidIterations() << std::ends;
+fluidItersInput->value(oss.str().c_str());
 }
 }

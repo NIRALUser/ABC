@@ -32,7 +32,7 @@ class GUI {open
     } {
       Fl_Box {} {
         label {
-ABC (Atlas Based Classification) GUI v1.0
+ABC (Atlas Based Classification) GUI v1.1
 Normal brain segmentation from MRI
 
 Marcel Prastawa
@@ -95,7 +95,7 @@ orientwindow->set_non_modal();}
     }
     Fl_Window mainwindow {
       label ABC open
-      xywh {309 66 600 538} type Double visible
+      xywh {309 66 600 535} type Double visible
     } {
       Fl_Tabs {} {open
         xywh {0 35 620 500} box UP_BOX
@@ -130,7 +130,7 @@ tab2->show();}
             xywh {25 164 580 30} box FLAT_BOX color 175 align 20
           }
           Fl_Box {} {
-            label {Prior weight adjustments (space separated)}
+            label {Prior weight adjustments (space separated, e.g. 1 1 1 1)}
             xywh {25 319 580 30} box FLAT_BOX color 175 align 20
           }
           Fl_Input prWeightsInput {
@@ -161,17 +161,9 @@ atlasdirOutput->value(dir);}
             label {Deformable registration of atlas to subject}
             xywh {25 393 580 30} box FLAT_BOX color 175 align 20
           }
-          Fl_Input warpInput_nx {
-            label {Grid size:} selected
-            xywh {261 429 40 30}
-          }
-          Fl_Input warpInput_ny {
-            label X
-            xywh {320 429 40 30}
-          }
-          Fl_Input warpInput_nz {
-            label X
-            xywh {376 430 40 30}
+          Fl_Input fluidItersInput {
+            label {Fluid iterations:}
+            xywh {303 429 40 30}
           }
         }
         Fl_Group tab2 {
@@ -509,11 +501,10 @@ p->SetMaxBiasDegree(atoi(biasDegreeInput->value()));
 
 p->SetDoAtlasWarp(warpAtlasButton->value() != 0);
 
-p->SetAtlasWarpGridX(atoi(warpInput_nx->value()));
-p->SetAtlasWarpGridY(atoi(warpInput_ny->value()));
-p->SetAtlasWarpGridZ(atoi(warpInput_nz->value()));
+p->SetAtlasWarpFluidIterations(atoi(fluidItersInput->value()));
 
-return p;} {}
+return p;} {selected
+    }
   }
   Function {SetGUIElements(EMSParameters::Pointer p)} {open return_type void
   } {
@@ -581,20 +572,8 @@ warpAtlasButton->value(p->GetDoAtlasWarp());
 
 {
 std::stringstream oss;
-oss << p->GetAtlasWarpGridX() << std::ends;
-warpInput_nx->value(oss.str().c_str());
-}
-
-{
-std::stringstream oss;
-oss << p->GetAtlasWarpGridY() << std::ends;
-warpInput_ny->value(oss.str().c_str());
-}
-
-{
-std::stringstream oss;
-oss << p->GetAtlasWarpGridZ() << std::ends;
-warpInput_nz->value(oss.str().c_str());
+oss << p->GetAtlasWarpFluidIterations() << std::ends;
+fluidItersInput->value(oss.str().c_str());
 }} {}
   }
 } 

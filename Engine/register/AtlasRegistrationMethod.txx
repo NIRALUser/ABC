@@ -43,7 +43,7 @@ AtlasRegistrationMethod<TOutputPixel, TProbabilityPixel>
 
   m_TemplateFileName = "";
 
-  m_ProbabilityDirectory = "";
+  m_AtlasDirectory = "";
 
   m_ImageFileNames.Clear();
 
@@ -110,8 +110,8 @@ AtlasRegistrationMethod<TOutputPixel, TProbabilityPixel>
   // registrations
   if (m_TemplateFileName.length() == 0)
     itkExceptionMacro(<< "Template file name not specified");
-  if (m_ProbabilityDiretory.length() == 0)
-    itkExceptionMacro(<< "No probability dir specified");
+  if (m_AtlasDiretory.length() == 0)
+    itkExceptionMacro(<< "No atlas dir specified");
   */
 
 }
@@ -327,10 +327,17 @@ AtlasRegistrationMethod<TOutputPixel, TProbabilityPixel>
 template <class TOutputPixel, class TProbabilityPixel>
 void
 AtlasRegistrationMethod<TOutputPixel, TProbabilityPixel>
-::SetProbabilityDirectory(const std::string& dir)
+::SetAtlasDirectory(const std::string& dir)
 {
-  m_ProbabilityDirectory = dir;
+  m_AtlasDirectory = dir;
 
+  m_TemplateFileName = dir + std::string("template.mha");
+
+  m_TemplateAffineTransform = AffineTransformType::New();
+
+  m_AffineTransformReadFlags[0] = 0;
+
+  m_DoneRegistration = false;
   m_DoneResample = false;
 
   m_Modified = true;
@@ -738,7 +745,7 @@ AtlasRegistrationMethod<TOutputPixel, TProbabilityPixel>
     try
     {
       std::ostringstream oss;
-      oss << m_ProbabilityDirectory << prIndex << ".mha" << std::ends;
+      oss << m_AtlasDirectory << prIndex << ".mha" << std::ends;
       reader->SetFileName(oss.str().c_str());
       reader->Update();
     }

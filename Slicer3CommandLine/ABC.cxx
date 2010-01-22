@@ -162,19 +162,14 @@ int run_ABC(int argc, char** argv)
 
   segfilter->SetMaxBiasDegree(biasDegree);
 
-  bool dowarp = false;
-  for (int i = 0; i < warpPoints.size(); i++)
-  {
-    if (warpPoints[i] != 0)
-      dowarp = true;
-  }
+  bool dowarp = (atlasFluidIters != 0);
 
   if (dowarp)
     segfilter->WarpingOn();
   else
     segfilter->WarpingOff();
 
-  segfilter->SetWarpGrid(warpPoints[0], warpPoints[1], warpPoints[2]);
+  segfilter->SetWarpFluidIterations(atlasFluidIters);
 
   segfilter->Update();
 

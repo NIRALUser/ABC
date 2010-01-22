@@ -62,6 +62,9 @@ public:
   itkGetMacro(MaxBiasDegree, unsigned int);
   itkSetMacro(MaxBiasDegree, unsigned int);
 
+  itkGetMacro(AtlasWarpFluidIterations, unsigned int);
+  itkSetMacro(AtlasWarpFluidIterations, unsigned int);
+
   itkGetMacro(AtlasWarpGridX, unsigned int);
   itkSetMacro(AtlasWarpGridX, unsigned int);
   itkGetMacro(AtlasWarpGridY, unsigned int);
@@ -94,6 +97,8 @@ protected:
   std::string m_AtlasOrientation;
 
   bool m_DoAtlasWarp;
+
+  unsigned int m_AtlasWarpFluidIterations;
 
   unsigned int m_AtlasWarpGridX;
   unsigned int m_AtlasWarpGridY;

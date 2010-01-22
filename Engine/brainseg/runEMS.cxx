@@ -144,10 +144,16 @@ runEMS(EMSParameters* emsp, bool debugflag, bool writemoreflag)
   muLogMacro(
     << "Max bias polynomial degree: " << emsp->GetMaxBiasDegree() << "\n");
   muLogMacro(<< "Atlas warping: " << emsp->GetDoAtlasWarp() << "\n");
+/*
+// Deprecated
   muLogMacro(
     << "Atlas warp spline grid size: " << emsp->GetAtlasWarpGridX() << " X "
     << emsp->GetAtlasWarpGridY() << " X "
     << emsp->GetAtlasWarpGridZ() << "\n");
+*/
+  muLogMacro(
+    << "Atlas warp fluid iterations: " << emsp->GetAtlasWarpFluidIterations()
+    << "\n");
 
   muLogMacro(<< "\n");
 
@@ -180,9 +186,6 @@ runEMS(EMSParameters* emsp, bool debugflag, bool writemoreflag)
 
     atlasreg->SetSuffix(emsp->GetSuffix());
 
-    std::string templatefn = atlasdir + std::string("template.mha");
-    atlasreg->SetTemplateFileName(templatefn);
-
     atlasreg->SetAtlasOrientation(emsp->GetAtlasOrientation());
 
     atlasreg->SetImageFileNames(emsp->GetImages());
@@ -201,8 +204,8 @@ runEMS(EMSParameters* emsp, bool debugflag, bool writemoreflag)
     if (imagemapstr.compare("rigid") == 0)
       atlasreg->SetImageLinearTransformChoice(AtlasRegType::RIGID_TRANSFORM);
 
-    // Directory with the priors
-    atlasreg->SetProbabilityDirectory(atlasdir);
+    // Directory with the template and priors (template.mha, 1.mha, ... 99.mha)
+    atlasreg->SetAtlasDirectory(atlasdir);
 
     muLogMacro(<< "Attempting to read previous registration results..."
       << std::endl);
@@ -338,6 +341,7 @@ runEMS(EMSParameters* emsp, bool debugflag, bool writemoreflag)
     emsp->GetAtlasWarpGridX(), 
     emsp->GetAtlasWarpGridY(), 
     emsp->GetAtlasWarpGridZ());
+  segfilter->SetWarpFluidIterations(emsp->GetAtlasWarpFluidIterations());
 
   segfilter->Update();
 
@@ -467,9 +471,8 @@ runEMS(EMSParameters* emsp, bool debugflag, bool writemoreflag)
     writer->UseCompressionOn();
     writer->Update();
 
-//TODO
-// write fluid warps
 /*
+// Deprecated
     fn =
       outdir + mu::get_name((emsp->GetImages()[0]).c_str()) +
       std::string("_to_template") + 
@@ -479,6 +482,17 @@ runEMS(EMSParameters* emsp, bool debugflag, bool writemoreflag)
       fn.c_str(), segfilter->GetTemplateBSplineTransform());
 
 */
+    fn =
+      outdir + mu::get_name((emsp->GetImages()[0]).c_str()) +
+      std::string("_to_template") + 
+      std::string("_dispF_") + std::string(emsp->GetSuffix()) + ".mha";
+
+    typedef itk::ImageFileWriter<SegFilterType::DeformationFieldType>
+      DeformationWriterType;
+    DeformationWriterType::Pointer defwriter = DeformationWriterType::New();
+    defwriter->SetInput(segfilter->GetTemplateFluidDeformation());
+    defwriter->SetFileName(fn.c_str());
+    defwriter->Update();
   }
 
   timer->Stop();

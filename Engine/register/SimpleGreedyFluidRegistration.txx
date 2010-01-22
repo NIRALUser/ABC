@@ -19,6 +19,7 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
   m_MaxStep = 0.5;
   m_Delta = 0.0;
   m_KernelWidth = 1.0;
+  m_KernelRadius = 3;
   m_Modified = false;
 }
 
@@ -62,6 +63,9 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
 {
   if (!m_Modified)
     return;
+
+  if (m_FixedImages.GetSize() != m_MovingImages.GetSize())
+    itkExceptionMacro(<< "Number of channels must match");
 
   // Initialize out = input moving
   m_OutputImages.Clear();
@@ -110,6 +114,42 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
   m_DisplacementField->SetRegions(m_FixedImages[0]->GetLargestPossibleRegion());
   m_DisplacementField->Allocate();
   m_DisplacementField->FillBuffer(zerov);
+
+  // Initialize using user-specified deformation if available
+  if (!m_InitialDisplacementField.IsNull())
+  {
+    for (it.GoToBegin(); !it.IsAtEnd(); ++it)
+    {
+      ImageIndexType ind = it.GetIndex();
+
+      ImagePointType p;
+      m_DeformationField->TransformIndexToPhysicalPoint(ind, p);
+
+      DisplacementType v = m_InitialDisplacementField->GetPixel(ind);
+      m_DisplacementField->SetPixel(ind, v);
+
+      DisplacementType h;
+      for (unsigned int i = 0; i < Dimension; i++)
+        h[i] = p[i] + v[i];
+      m_DeformationField->SetPixel(ind, h);
+    }
+
+    m_OutputImages.Clear();
+    for (unsigned int ichan = 0; ichan < m_MovingImages.GetSize(); ichan++)
+    {
+      typedef itk::WarpImageFilter<
+        ImageType, ImageType, DeformationFieldType>
+        WarperType;
+      typename WarperType::Pointer warpf = WarperType::New();
+      warpf->SetInput(m_MovingImages[ichan]);
+      warpf->SetDeformationField(m_DisplacementField);
+      warpf->SetOutputDirection(m_DeformationField->GetDirection());
+      warpf->SetOutputOrigin(m_DeformationField->GetOrigin());
+      warpf->SetOutputSpacing(m_DeformationField->GetSpacing());
+      warpf->Update();
+      m_OutputImages.Append(warpf->GetOutput());
+    }
+  }
 
   // Initialize delta
   m_Delta = 0.0;
@@ -214,7 +254,7 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
 
   typename DeformationSmootherType::Pointer defsmoother = DeformationSmootherType::New();
   typename DeformationFieldType::SizeType radii;
-  radii.Fill(2);
+  radii.Fill(m_KernelRadius);
   defsmoother->SetRadius(radii);
   defsmoother->SetVariance(adjustedWidth * adjustedWidth);
   defsmoother->SetInput(velocF);

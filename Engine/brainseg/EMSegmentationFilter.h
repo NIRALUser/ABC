@@ -150,6 +150,7 @@ public:
   void SetWarpGrid(unsigned int gx, unsigned int gy, unsigned int gz)
   { m_WarpGrid[0] = gx; m_WarpGrid[1] = gy; m_WarpGrid[2] = gz; }
 
+  itkGetConstMacro(WarpFluidIterations, unsigned int);
   itkSetMacro(WarpFluidIterations, unsigned int);
 
 protected:

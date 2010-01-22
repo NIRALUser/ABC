@@ -97,10 +97,11 @@ public:
   itkGetMacro(OutputDirectory, std::string);
   itkSetMacro(OutputDirectory, std::string);
 
-  void SetProbabilityDirectory(const std::string& dir);
+  void SetAtlasDirectory(const std::string& dir);
+
+  void SetImageFileNames(StringList filenames);
 
   void SetTemplateFileName(std::string filename);
-  void SetImageFileNames(StringList filenames);
 
   void SetAtlasOrientation(std::string orient);
   void SetImageOrientations(StringList orientations);
@@ -166,9 +167,11 @@ private:
 
   std::string m_OutputDirectory;
 
-  std::string m_TemplateFileName;
-  std::string m_ProbabilityDirectory;
+  std::string m_AtlasDirectory;
+
   StringList m_ImageFileNames;
+
+  std::string m_TemplateFileName;
 
 // HACK
   std::string m_OtherTemplateFileName;

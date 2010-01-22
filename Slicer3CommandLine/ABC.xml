@@ -182,11 +182,10 @@ This work is part of the National Alliance for Medical Image Computing (NAMIC), 
     </string-enumeration>
 
     <integer-vector>
-    <name>warpPoints</name>
-    <label>Warp Control Points (0,0,0 = off)</label>
-    <flag>w</flag>
-    <longflag>--warpPoints</longflag>
-    <default>0,0,0</default>
+    <name>atlasFluidIters</name>
+    <label>Atlas Warping Fluid Iterations (0 = off)</label>
+    <longflag>--atlasFluidIters</longflag>
+    <default>10</default>
     </integer-vector>
   </parameters>
 </executable>

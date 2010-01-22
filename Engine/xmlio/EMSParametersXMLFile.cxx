@@ -126,6 +126,11 @@ EMSParametersXMLFileReader
     unsigned int i = atoi(m_CurrentString.c_str());
     m_PObject->SetDoAtlasWarp(i != 0);
   }
+  else if(itksys::SystemTools::Strucmp(name,"ATLAS-WARP-FLUID-ITERATIONS") == 0)
+  {
+    unsigned int i = atoi(m_CurrentString.c_str());
+    m_PObject->SetAtlasWarpFluidIterations(i);
+  }
   else if(itksys::SystemTools::Strucmp(name,"ATLAS-WARP-GRID-X") == 0)
   {
     unsigned int i = atoi(m_CurrentString.c_str());
@@ -257,6 +262,8 @@ EMSParametersXMLFileWriter
     WriteField<float>(this, "PRIOR", prWeights[i], output);
 
   WriteField<bool>(this, "DO-ATLAS-WARP", p->GetDoAtlasWarp(), output);
+
+  WriteField<unsigned int>(this, "ATLAS-WARP-FLUID-ITERATIONS", p->GetAtlasWarpFluidIterations(), output);
 
   WriteField<unsigned int>(this, "ATLAS-WARP-GRID-X", p->GetAtlasWarpGridX(), output);
   WriteField<unsigned int>(this, "ATLAS-WARP-GRID-Y", p->GetAtlasWarpGridY(), output);

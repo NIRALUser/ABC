@@ -26,6 +26,8 @@ EMSParameters
 
   m_MaxBiasDegree = 4;
 
+  m_AtlasWarpFluidIterations = 5;
+
   m_AtlasWarpGridX = 5;
   m_AtlasWarpGridY = 5;
   m_AtlasWarpGridZ = 5;
@@ -109,10 +111,15 @@ EMSParameters
     os << "Prior " << i+1 << " = " << m_PriorWeights[i] << std::endl;
   if (m_DoAtlasWarp)
   {
+/*
+// Deprecated
     os << "Atlas warping, grid = "
        << m_AtlasWarpGridX << "x"
        << m_AtlasWarpGridY << "x"
        << m_AtlasWarpGridZ << std::endl;
+*/
+    os << "Atlas warping, with " << m_AtlasWarpFluidIterations
+      << " fluid iterations" << std::endl;
   }
   else
   {

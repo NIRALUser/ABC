@@ -48,9 +48,14 @@ public:
 
   void SetMask(MaskPointer m);
 
-  itkSetMacro(KernelWidth, double);
   itkSetMacro(Iterations, unsigned int);
   itkSetMacro(MaxStep, double);
+
+  itkSetMacro(KernelWidth, double);
+  itkSetMacro(KernelRadius, unsigned int);
+
+  void SetInitialDisplacementField(DeformationFieldPointer def)
+  { m_InitialDisplacementField = def; }
 
   DeformationFieldPointer GetDeformationField()
   { if (m_Modified) this->Update(); return m_DeformationField; }
@@ -71,7 +76,9 @@ protected:
 
   unsigned int m_Iterations;
   double m_MaxStep;
+
   double m_KernelWidth;
+  unsigned int m_KernelRadius;
 
   double m_Delta;
 
@@ -84,6 +91,8 @@ protected:
 
   DeformationFieldPointer m_DeformationField;
   DeformationFieldPointer m_DisplacementField;
+
+  DeformationFieldPointer m_InitialDisplacementField;
 
   bool m_Modified;
 
