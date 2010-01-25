@@ -1,7 +1,7 @@
 
 
 // Atlas based segmentation
-// ABC outdir --inputImage1 img1 ... atlasdir --atlasOrient RAI -b 4 --warpPoints 5,5,5
+// ABC outdir --inputImage img1 ... --inputImage imgn atlasdir --atlasOrient RAI -b 4 --atlasFluidIters 5
 
 #include "ABCCLP.h"
 
@@ -39,9 +39,6 @@ int run_ABC(int argc, char** argv)
 {
 
   PARSE_ARGS;
-
-  if (warpPoints.size() != 3)
-    throw "Need 3 integers for warping control points";
 
   typedef itk::Image<unsigned char, 3> ByteImageType;
   typedef itk::Image<float, 3> FloatImageType;
@@ -124,7 +121,7 @@ int run_ABC(int argc, char** argv)
       atlasreg->SetImageLinearTransformChoice(AtlasRegType::RIGID_TRANSFORM);
 
     // Location of the priors (1.mha, 2.mha, ... 99.mha, ... etc)
-    atlasreg->SetProbabilityDirectory(atlasDir);
+    atlasreg->SetAtlasDirectory(atlasDir);
 
     // NOTE: always start from scratch in Slicer
     //muLogMacro(<< "Attempting to read previous registration results..."
