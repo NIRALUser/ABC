@@ -6,6 +6,7 @@
 #include "itkImageDuplicator.h"
 #include "itkImageRegionIteratorWithIndex.h"
 #include "itkLinearInterpolateImageFunction.h"
+#include "itkRecursiveGaussianImageFilter.h"
 #include "itkWarpImageFilter.h"
 #include "itkWarpVectorImageFilter.h"
 
@@ -19,7 +20,6 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
   m_MaxStep = 0.5;
   m_Delta = 0.0;
   m_KernelWidth = 1.0;
-  m_KernelRadius = 3;
   m_Modified = false;
 }
 
@@ -192,7 +192,6 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
   velocF->FillBuffer(zerov);
 
   typedef itk::ImageRegionIteratorWithIndex<DeformationFieldType> IteratorType;
-  IteratorType it(velocF, velocF->GetLargestPossibleRegion());
 
   for (unsigned int ichan = 0; ichan < numChannels; ichan++)
   {
@@ -211,6 +210,7 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
 
 // TODO: use mask?
 
+      IteratorType it(velocF, velocF->GetLargestPossibleRegion());
       for (it.GoToBegin(); !it.IsAtEnd(); ++it)
       {
         DisplacementType v = it.Get();
@@ -228,6 +228,22 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
     } // for dim
   } // for ichan
 
+  IteratorType it(velocF, velocF->GetLargestPossibleRegion());
+
+  // Apply Green's kernel to velocity field
+  double adjustedWidth = m_KernelWidth * minSpacing;
+
+  typedef VectorBlurImageFilter<DeformationFieldType, DeformationFieldType>
+    DeformationSmootherType;
+
+  typename DeformationSmootherType::Pointer defsmoother = DeformationSmootherType::New();
+  defsmoother->SetKernelWidth(adjustedWidth);
+  defsmoother->SetInput(velocF);
+  defsmoother->Update();
+
+  velocF = defsmoother->GetOutput();
+
+  // Update delta at initial step
   if (m_Delta == 0.0)
   {
     double maxVeloc = 0.0;
@@ -245,22 +261,6 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
   {
     it.Set(it.Get() * m_Delta);
   }
-
-  // Apply Green's kernel to velocity field
-  typedef VectorBlurImageFilter<DeformationFieldType, DeformationFieldType>
-    DeformationSmootherType;
-
-  double adjustedWidth = m_KernelWidth * minSpacing;
-
-  typename DeformationSmootherType::Pointer defsmoother = DeformationSmootherType::New();
-  typename DeformationFieldType::SizeType radii;
-  radii.Fill(m_KernelRadius);
-  defsmoother->SetRadius(radii);
-  defsmoother->SetVariance(adjustedWidth * adjustedWidth);
-  defsmoother->SetInput(velocF);
-  defsmoother->Update();
-
-  velocF = defsmoother->GetOutput();
 
   // Compose velocity field
   // h(x) = h( g(x) ) where g(x) = x + v

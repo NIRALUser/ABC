@@ -143,6 +143,7 @@ ImageDirectionStandardizer<TImage>
   if (itksys::SystemTools::Strucmp(dirstring.c_str(), "file") == 0)
   {
     orient->UseImageDirectionOn();
+    orient->SetGivenCoordinateDirection(img->GetDirection());
   }
   else
   {
@@ -159,13 +160,15 @@ ImageDirectionStandardizer<TImage>
   else
   {
     orient->SetDesiredCoordinateDirection(
-      this->_GetDirectionFromString(m_TargetOrientationCode));
+      this->_GetDirectionFromString(m_TargetOrientationCode) );
   }
 
   orient->SetInput(img);
   orient->Update();
 
-  return orient->GetOutput();
+  ImagePointer out = orient->GetOutput();
+
+  return out;
 
 }
 

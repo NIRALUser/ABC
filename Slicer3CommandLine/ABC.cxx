@@ -78,7 +78,7 @@ int run_ABC(int argc, char** argv)
   if (inputOrient4.size() != 0)
     inputOrients.Append(inputOrient4);
 */
-  for (int i = 0; i < inputFiles.GetSize(); i++)
+  for (unsigned int i = 0; i < inputFiles.GetSize(); i++)
     inputOrients.Append(std::string("file"));
 
   muLogMacro(<< "Registering images using affine transform...\n");

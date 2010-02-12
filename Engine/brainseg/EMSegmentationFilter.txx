@@ -32,6 +32,7 @@
 #include <math.h>
 #include <stdlib.h>
 
+#define FLUID_USE_PROBS 1
 
 template <class TInputImage, class TProbabilityImage>
 EMSegmentationFilter <TInputImage, TProbabilityImage>
@@ -773,7 +774,7 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
         maxP = p;
     }
 
-    double probThres = 0.8*maxP;
+    double probThres = 0.9*maxP;
 
     unsigned int numPossibleSamples = 0;
     for (it.GoToBegin(); !it.IsAtEnd(); ++it)
@@ -819,6 +820,9 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
       if (m_Mask->GetPixel(ind) == 0)
         continue;
 
+      if (it.Get() < probThres)
+        continue;
+
       if (selectMask[r] != 0)
       {
         for (unsigned int ichan = 0; ichan < numChannels; ichan++)
@@ -844,7 +848,7 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
     mcdf.SetChangeTolerance(1e-4);
     mcdf.SetCoverFraction(0.5);
     mcdf.SetNumberOfStarts(100);
-    mcdf.SetMaxCStepIterations(10);
+    mcdf.SetMaxCStepIterations(20);
 
     FastMCDSampleFilter::VectorType mu;
     FastMCDSampleFilter::MatrixType sigma; // Discarded
@@ -1242,7 +1246,6 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
 
 }
 
-
 template <class TInputImage, class TProbabilityImage>
 void
 EMSegmentationFilter <TInputImage, TProbabilityImage>
@@ -1583,9 +1586,7 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
     // Update distribution parameters after bias correction
     this->ComputeDistributions();
 
-//PP
-    // Recompute posteriors, not at full resolution
-    //this->ComputePosteriors(false);
+    // Recompute posteriors
     this->ComputePosteriors(true);
 
     double prevLogLikelihood = logLikelihood;
@@ -1594,24 +1595,31 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
 
     // Compute log-likelihood and normalize posteriors
     logLikelihood = 0;
+#if FLUID_USE_PROBS
+// Need normalized posteriors at every voxel for probabilistic fluid warp
+    for (ind[2] = 0; ind[2] < (long)size[2]; ind[2] ++)
+      for (ind[1] = 0; ind[1] < (long)size[1]; ind[1] ++)
+        for (ind[0] = 0; ind[0] < (long)size[0]; ind[0] ++)
+#else
     for (ind[2] = 0; ind[2] < (long)size[2]; ind[2] += skips[2])
       for (ind[1] = 0; ind[1] < (long)size[1]; ind[1] += skips[1])
         for (ind[0] = 0; ind[0] < (long)size[0]; ind[0] += skips[0])
+#endif
         {
           if (m_Mask->GetPixel(ind) == 0)
             continue;
 
-          double tmp = 1e-20;
+          double sumP = 1e-20;
           for (unsigned int iclass = 0; iclass < numClasses; iclass++)
-            tmp += m_Posteriors[iclass]->GetPixel(ind);
-          logLikelihood += log(tmp);
+            sumP += m_Posteriors[iclass]->GetPixel(ind);
+          logLikelihood += log(sumP);
 
           // Normalize posteriors
           // TODO: normalize to min-max range of prob pixel type?
           // Assume that probability pixel type is float / double for now
           for (unsigned int iclass = 0; iclass < numClasses; iclass++)
             m_Posteriors[iclass]->SetPixel(ind, (ProbabilityImagePixelType)
-              (m_Posteriors[iclass]->GetPixel(ind) / tmp));
+              (m_Posteriors[iclass]->GetPixel(ind) / sumP));
         }
     muLogMacro(<< "log(likelihood) = " << logLikelihood << "\n");
 
@@ -2020,8 +2028,11 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
 
   // Create prior images by compounding relevant posteriors
   DynArray<ProbabilityImagePointer> subjectPriors;
+#if FLUID_USE_PROBS
+  for (unsigned int i = 0; i < numPriors; i++)
+#else
   for (unsigned int i = 0; i < (numPriors-1); i++)
-  //for (unsigned int i = 0; i < numPriors; i++)
+#endif
   {
     // Subject prior = sum of all class components
 
@@ -2044,19 +2055,12 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
     subjectPriors.Append(tmp);
   }
 
-  // Make subject 1st channel intensities similar to template
-  typedef IntensityMatcher<InputImageType, ProbabilityImageType> MatcherType;
-  typename MatcherType::Pointer matcher = MatcherType::New();
-  matcher->SetSourceImage(m_CorrectedImages[0]);
-  matcher->SetTargetImage(m_WarpedTemplateImage);
-  //matcher->SetProbabilities(m_Posteriors);
-  matcher->SetProbabilities(subjectPriors);
-  matcher->Update();
-  InputImagePointer matchImg = matcher->GetOutput();
-
   DynArray<ProbabilityImagePointer> atlasPriors;
+#if FLUID_USE_PROBS
+  for (unsigned int i = 0; i < numPriors; i++)
+#else
   for (unsigned int i = 0; i < (numPriors-1); i++)
-  //for (unsigned int i = 0; i < numPriors; i++)
+#endif
   {
     atlasPriors.Append(m_OriginalPriors[i]);
   }
@@ -2067,32 +2071,42 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
 
 //TODO: downsample input images and upsample deformation?
 
-// If using probabilities
-  //fluid->SetFixedImages(subjectPriors);
-  //fluid->SetMovingImages(atlasPriors);
+#if FLUID_USE_PROBS
+// Use probabilities
+  fluid->SetFixedImages(subjectPriors);
+  fluid->SetMovingImages(atlasPriors);
+#else
+  // Make subject 1st channel intensities similar to template
+  typedef IntensityMatcher<InputImageType, ProbabilityImageType> MatcherType;
+  typename MatcherType::Pointer matcher = MatcherType::New();
+  matcher->SetSourceImage(m_CorrectedImages[0]);
+  matcher->SetTargetImage(m_WarpedTemplateImage);
+  //matcher->SetProbabilities(m_Posteriors);
+  matcher->SetProbabilities(subjectPriors);
+  matcher->Update();
 
-// If using matched modalities
+  InputImagePointer matchImg = matcher->GetOutput();
   DynArray<InputImagePointer> fixedSet;
   fixedSet.Append(matchImg);
   fluid->SetFixedImages(fixedSet);
   DynArray<InputImagePointer> movingSet;
   movingSet.Append(m_WarpedTemplateImage);
   fluid->SetMovingImages(movingSet);
+#endif
 
   fluid->SetInitialDisplacementField(m_TemplateFluidDeformation);
   //fluid->SetMask(m_OriginalMask);
   fluid->SetIterations(m_WarpFluidIterations);
-  fluid->SetMaxStep(1.0);
-  fluid->SetKernelWidth(2.0);
-  fluid->SetKernelRadius(3);
+  fluid->SetMaxStep(0.5);
+  fluid->SetKernelWidth(6.0);
   fluid->Update();
-
-  //m_Priors = fluid->GetOutputImages();
 
   m_TemplateFluidDeformation = fluid->GetDisplacementField();
 
-/*
-  // Don't compute last prior since it is 1 - all other warped priors at the end
+#if FLUID_USE_PROBS
+  m_Priors = fluid->GetOutputImages();
+#if 0
+  // Don't include last prior since it is 1 - all other warped priors at the end
   ProbabilityImagePointer lastPrior = ProbabilityImageType::New();
   lastPrior->CopyInformation(m_OriginalPriors[0]);
   lastPrior->SetRegions(m_OriginalPriors[0]->GetLargestPossibleRegion());
@@ -2112,8 +2126,8 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
   }
 
   m_Priors.Append(lastPrior);
-*/
-
+#endif
+#else
   m_Priors.Clear();
   for (unsigned int i = 0; i < numPriors; i++)
   {
@@ -2129,6 +2143,7 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
     warpf->Update();
     m_Priors.Append(warpf->GetOutput());
   }
+#endif
 
   // Update mask
   this->ComputeMask();

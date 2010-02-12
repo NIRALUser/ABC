@@ -82,6 +82,7 @@ This work is part of the National Alliance for Medical Image Computing (NAMIC), 
     <label>Atlas Orientation</label>
     <flag>u</flag>
     <longflag>--atlasOrient</longflag>
+    <default>RAI</default>
     </string>
 
     <float-vector>

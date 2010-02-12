@@ -52,7 +52,6 @@ public:
   itkSetMacro(MaxStep, double);
 
   itkSetMacro(KernelWidth, double);
-  itkSetMacro(KernelRadius, unsigned int);
 
   void SetInitialDisplacementField(DeformationFieldPointer def)
   { m_InitialDisplacementField = def; }
@@ -78,7 +77,6 @@ protected:
   double m_MaxStep;
 
   double m_KernelWidth;
-  unsigned int m_KernelRadius;
 
   double m_Delta;
 

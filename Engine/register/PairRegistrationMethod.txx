@@ -476,8 +476,8 @@ PairRegistrationMethod<TPixel>
   powell->SetMaximumIterations(10);
   powell->StartOptimization();
 
-  muLogMacro(<< "Registering at [1x1x1]...\n");
-  metric->SetSampleSpacing(1.0*minSpacing);
+  muLogMacro(<< "Registering at [2x2x2]...\n");
+  metric->SetSampleSpacing(2.0*minSpacing);
   powell->SetCostFunction(metric);
   powell->SetInitialPosition(powell->GetCurrentPosition());
   powell->SetMaximumIterations(5);
