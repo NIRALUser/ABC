@@ -6,7 +6,6 @@
 #include "itkImageDuplicator.h"
 #include "itkImageRegionIteratorWithIndex.h"
 #include "itkLinearInterpolateImageFunction.h"
-#include "itkRecursiveGaussianImageFilter.h"
 #include "itkWarpImageFilter.h"
 #include "itkWarpVectorImageFilter.h"
 
@@ -228,8 +227,6 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
     } // for dim
   } // for ichan
 
-  IteratorType it(velocF, velocF->GetLargestPossibleRegion());
-
   // Apply Green's kernel to velocity field
   double adjustedWidth = m_KernelWidth * minSpacing;
 
@@ -242,6 +239,8 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
   defsmoother->Update();
 
   velocF = defsmoother->GetOutput();
+
+  IteratorType it(velocF, velocF->GetLargestPossibleRegion());
 
   // Update delta at initial step
   if (m_Delta == 0.0)

@@ -32,7 +32,7 @@
 #include <math.h>
 #include <stdlib.h>
 
-#define FLUID_USE_PROBS 1
+#define FLUID_USE_PROBS 0
 
 template <class TInputImage, class TProbabilityImage>
 EMSegmentationFilter <TInputImage, TProbabilityImage>
@@ -1595,7 +1595,8 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
 
     // Compute log-likelihood and normalize posteriors
     logLikelihood = 0;
-#if FLUID_USE_PROBS
+//#if FLUID_USE_PROBS
+#if 1
 // Need normalized posteriors at every voxel for probabilistic fluid warp
     for (ind[2] = 0; ind[2] < (long)size[2]; ind[2] ++)
       for (ind[1] = 0; ind[1] < (long)size[1]; ind[1] ++)
@@ -2098,7 +2099,7 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
   //fluid->SetMask(m_OriginalMask);
   fluid->SetIterations(m_WarpFluidIterations);
   fluid->SetMaxStep(0.5);
-  fluid->SetKernelWidth(6.0);
+  fluid->SetKernelWidth(4.0);
   fluid->Update();
 
   m_TemplateFluidDeformation = fluid->GetDisplacementField();
