@@ -6,13 +6,19 @@
 
 #include "itkImageRegionIteratorWithIndex.h"
 
+#include "vnl/vnl_math.h"
 
+#include "Heap.h"
+
+#include <cmath>
+
+// Object for doing argsort
 struct IDouble{
   double v;
-   unsigned int i;
-   bool operator < ( const IDouble& arg ) const
-   {
-     return v < arg.v;
+  uint i;
+  bool operator < ( const IDouble& arg ) const
+  {
+    return v < arg.v;
   }
 };
 
@@ -44,27 +50,50 @@ double
 IntensityMatcher<TInputImage, TProbImage>
 ::EvaluatePoint(double x)
 {
-  unsigned int numClasses = m_SourcePoints.GetSize();
+  uint numClasses = m_SourcePoints.GetSize();
+
+  double x1, x2;
+  double y1, y2;
 
   if (x < m_SourcePoints[0])
+  {
+    x1 = m_SourcePoints[0];
+    x2 = m_SourcePoints[1];
+    y1 = m_TargetPoints[0];
+    y2 = m_TargetPoints[1];
+    double v = (y2 - y1) / (x2 - x1 + 1e-20) * (x - x1) + y1;
+    if (v < m_MinTarget)
+      v = m_MinTarget;
+    if (v > m_MaxTarget)
+      v = m_MaxTarget;
     return m_TargetPoints[0];
-  if (x > m_SourcePoints[numClasses-1])
-    return m_TargetPoints[numClasses-1];
+  }
 
-  unsigned int c = 0;
+  if (x > m_SourcePoints[numClasses-1])
+  {
+    x1 = m_SourcePoints[numClasses-2];
+    x2 = m_SourcePoints[numClasses-1];
+    y1 = m_TargetPoints[numClasses-2];
+    y2 = m_TargetPoints[numClasses-1];
+    double v = (y2 - y1) / (x2 - x1 + 1e-20) * (x - x2) + y2;
+    if (v < m_MinTarget)
+      v = m_MinTarget;
+    if (v > m_MaxTarget)
+      v = m_MaxTarget;
+    return v;
+  }
+
+  uint c = 0;
   for (; c < (numClasses-1); c++)
   {
     if (x >= m_SourcePoints[c] && x <= m_SourcePoints[c+1])
       break;
   }
 
-  if (c >= (numClasses-1))
-    return m_TargetPoints[numClasses-1];
-
-  double x1 = m_SourcePoints[c];
-  double x2 = m_SourcePoints[c+1];
-  double y1 = m_TargetPoints[c];
-  double y2 = m_TargetPoints[c+1];
+  x1 = m_SourcePoints[c];
+  x2 = m_SourcePoints[c+1];
+  y1 = m_TargetPoints[c];
+  y2 = m_TargetPoints[c+1];
 
   return (y2 - y1) / (x2 - x1 + 1e-20) * (x - x1) + y1;
 }
@@ -95,7 +124,7 @@ IntensityMatcher<TInputImage, TProbImage>
   if (!m_Modified)
     return;
 
-  unsigned int numClasses = m_Probs.GetSize();
+  uint numClasses = m_Probs.GetSize();
 
   // Estimate class intensities
   m_SourcePoints.Initialize(numClasses, 0.0);
@@ -107,33 +136,52 @@ IntensityMatcher<TInputImage, TProbImage>
   typedef itk::ImageRegionIteratorWithIndex<ProbImageType> IteratorType;
   IteratorType it(m_Probs[0], m_Probs[0]->GetLargestPossibleRegion());
 
+  m_MinSource = vnl_huge_val(1.0);
+  m_MinTarget = vnl_huge_val(1.0);
+
+  m_MaxSource = -vnl_huge_val(1.0);
+  m_MaxTarget = -vnl_huge_val(1.0);
+
   for (it.GoToBegin(); !it.IsAtEnd(); ++it)
   {
     InputImageIndexType ind = it.GetIndex();
 
-    for (unsigned int c = 0; c < numClasses; c++)
+    double v_s = m_SourceImage->GetPixel(ind);
+    double v_t = m_TargetImage->GetPixel(ind);
+
+    if (v_s < m_MinSource)
+      m_MinSource = v_s;
+    if (v_s > m_MaxSource)
+      m_MaxSource = v_s;
+
+    if (v_t < m_MinTarget)
+      m_MinTarget = v_t;
+    if (v_t > m_MaxTarget)
+      m_MaxTarget = v_t;
+
+    for (uint c = 0; c < numClasses; c++)
     {
-      double p = m_Probs[c]->GetPixel(ind);
-      m_SourcePoints[c] += p * m_SourceImage->GetPixel(ind);
-      m_TargetPoints[c] += p * m_TargetImage->GetPixel(ind);
+      double p = pow(m_Probs[c]->GetPixel(ind), 2.0);
+      m_SourcePoints[c] += p * v_s;
+      m_TargetPoints[c] += p * v_t;
       sumProbs[c] += p;
     }
   }
 
-  for (unsigned int c = 0; c < numClasses; c++)
+  for (uint c = 0; c < numClasses; c++)
   {
     m_SourcePoints[c] /= sumProbs[c];
     m_TargetPoints[c] /= sumProbs[c];
   }
 
-  // Add BG
+  // Add BG, special case for MRI
   m_SourcePoints.Append(0);
   m_TargetPoints.Append(0);
   numClasses++;
 
   // Sort based on the source points
   Heap<IDouble> heap;
-  for (unsigned int c = 0; c < numClasses; c++)
+  for (uint c = 0; c < numClasses; c++)
   {
     IDouble d;
     d.v = m_SourcePoints[c];
@@ -144,10 +192,10 @@ IntensityMatcher<TInputImage, TProbImage>
   DynArray<double> oldSourcePoints = m_SourcePoints;
   DynArray<double> oldTargetPoints = m_TargetPoints;
 
-  for (unsigned int c = 0; c < numClasses; c++)
+  for (uint c = 0; c < numClasses; c++)
   {
     IDouble min = heap.ExtractMinimum();
-    unsigned int i = min.i;
+    uint i = min.i;
     m_SourcePoints[c] = oldSourcePoints[i];
     m_TargetPoints[c] = oldTargetPoints[i];
   }

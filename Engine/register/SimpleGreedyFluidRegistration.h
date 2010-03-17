@@ -34,6 +34,8 @@ public:
   typedef typename ImageType::IndexType ImageIndexType;
   typedef typename ImageType::Pointer ImagePointer;
   typedef typename ImageType::PointType ImagePointType;
+  typedef typename ImageType::RegionType ImageRegionType;
+  typedef typename ImageType::SizeType ImageSizeType;
   typedef typename ImageType::SpacingType ImageSpacingType;
 
   typedef itk::Vector<float, Dimension> DisplacementType;
@@ -71,7 +73,15 @@ protected:
   SimpleGreedyFluidRegistration();
   ~SimpleGreedyFluidRegistration();
 
-  void Step();
+  //DeformationFieldPointer DeformationToDisplacement(DeformationFieldPointer h);
+
+  ImagePointer DownsampleImage(ImagePointer img);
+  ImagePointer UpsampleImage(ImagePointer img);
+
+  DeformationFieldPointer DownsampleDeformation(DeformationFieldPointer img);
+  DeformationFieldPointer UpsampleDeformation(DeformationFieldPointer img);
+
+  bool Step();
 
   unsigned int m_Iterations;
   double m_MaxStep;
@@ -82,6 +92,9 @@ protected:
 
   DynArray<ImagePointer> m_FixedImages;
   DynArray<ImagePointer> m_MovingImages;
+
+  DynArray<ImagePointer> m_DownFixedImages;
+  DynArray<ImagePointer> m_DownMovingImages;
 
   MaskPointer m_Mask;
 

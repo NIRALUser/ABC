@@ -9,6 +9,7 @@
 #include "itkBinaryErodeImageFilter.h"
 #include "itkBoxMeanImageFilter.h"
 #include "itkBSplineDownsampleImageFilter.h"
+#include "itkDiscreteGaussianImageFilter.h"
 #include "itkNumericTraits.h"
 #include "itkResampleImageFilter.h"
 #include "itkWarpImageFilter.h"
@@ -1563,26 +1564,6 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
     }
 */
 
-    bool dowarp = m_DoWarp && (deltaLogLikelihood < m_WarpLikelihoodTolerance);
-
-    // Bias correction
-    if (m_MaxBiasDegree > 0)
-    {
-      if ((deltaLogLikelihood < m_BiasLikelihoodTolerance)
-          &&
-          (biasdegree < m_MaxBiasDegree))
-      {
-        biasdegree++;
-      }
-      if (dowarp)
-        this->CorrectBias(biasdegree, true);
-      else
-        this->CorrectBias(biasdegree, false);
-    }
-
-    if (dowarp)
-      this->DoWarping();
-
     // Update distribution parameters after bias correction
     this->ComputeDistributions();
 
@@ -1630,6 +1611,26 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
       //(logLikelihood - prevLogLikelihood) / fabs(prevLogLikelihood);
 
     muLogMacro(<< "delta log(likelihood) = " << deltaLogLikelihood << "\n");
+
+    bool dowarp = m_DoWarp && (deltaLogLikelihood < m_WarpLikelihoodTolerance);
+
+    // Bias correction
+    if (m_MaxBiasDegree > 0)
+    {
+      if ((deltaLogLikelihood < m_BiasLikelihoodTolerance)
+          &&
+          (biasdegree < m_MaxBiasDegree))
+      {
+        biasdegree++;
+      }
+      if (dowarp)
+        this->CorrectBias(biasdegree, true);
+      else
+        this->CorrectBias(biasdegree, false);
+    }
+
+    if (dowarp)
+      this->DoWarping();
 
     // Convergence check
     converged =
@@ -1929,6 +1930,12 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
 {
   itkDebugMacro(<< "DoWarping");
 
+  InputImageSpacingType spacing = m_CorrectedImages[0]->GetSpacing();
+  double minSpacing = spacing[0];
+  for (uint dim = 1; dim < 3; dim++)
+    if (spacing[dim] < minSpacing)
+      minSpacing = spacing[dim];
+
 #if 0
   muLogMacro(<< "Computing B-spline transform, with grid "
    << m_WarpGrid[0] << " x " << m_WarpGrid[1] << " x " << m_WarpGrid[2]
@@ -2053,7 +2060,15 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
         it.Set( it.Get() + m_Posteriors[iclass]->GetPixel(it.GetIndex()) );
     }
 
-    subjectPriors.Append(tmp);
+    typedef itk::DiscreteGaussianImageFilter<InputImageType, InputImageType>
+      BlurFilterType;
+    typename BlurFilterType::Pointer blurf = BlurFilterType::New();
+    blurf->SetInput(tmp);
+    blurf->SetVariance(minSpacing*minSpacing * 4.0);
+    blurf->Update();
+
+    //subjectPriors.Append(tmp);
+    subjectPriors.Append(blurf->GetOutput());
   }
 
   DynArray<ProbabilityImagePointer> atlasPriors;
@@ -2070,8 +2085,6 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
     FluidWarperType;
   typename FluidWarperType::Pointer fluid = FluidWarperType::New();
 
-//TODO: downsample input images and upsample deformation?
-
 #if FLUID_USE_PROBS
 // Use probabilities
   fluid->SetFixedImages(subjectPriors);
@@ -2080,26 +2093,37 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
   // Make subject 1st channel intensities similar to template
   typedef IntensityMatcher<InputImageType, ProbabilityImageType> MatcherType;
   typename MatcherType::Pointer matcher = MatcherType::New();
-  matcher->SetSourceImage(m_CorrectedImages[0]);
-  matcher->SetTargetImage(m_WarpedTemplateImage);
-  //matcher->SetProbabilities(m_Posteriors);
-  matcher->SetProbabilities(subjectPriors);
+  matcher->SetSourceImage(m_WarpedTemplateImage);
+  matcher->SetTargetImage(m_CorrectedImages[0]);
+  //matcher->SetProbabilities(subjectPriors);
+  matcher->SetProbabilities(atlasPriors);
   matcher->Update();
 
+  typedef itk::DiscreteGaussianImageFilter<InputImageType, InputImageType> BlurFilterType;
+  typename BlurFilterType::Pointer blurf = BlurFilterType::New();
+  //blurf->SetInput(matcher->GetOutput());
+  blurf->SetInput(m_CorrectedImages[0]);
+  blurf->SetVariance(minSpacing*minSpacing * 4.0);
+  blurf->Update();
+
+  //InputImagePointer matchImg = blurf->GetOutput();
+
   InputImagePointer matchImg = matcher->GetOutput();
+
   DynArray<InputImagePointer> fixedSet;
-  fixedSet.Append(matchImg);
+  //fixedSet.Append(m_CorrectedImages[0]);
+  fixedSet.Append(blurf->GetOutput());
   fluid->SetFixedImages(fixedSet);
   DynArray<InputImagePointer> movingSet;
-  movingSet.Append(m_WarpedTemplateImage);
+  movingSet.Append(matchImg);
   fluid->SetMovingImages(movingSet);
 #endif
 
   fluid->SetInitialDisplacementField(m_TemplateFluidDeformation);
   //fluid->SetMask(m_OriginalMask);
   fluid->SetIterations(m_WarpFluidIterations);
-  fluid->SetMaxStep(0.5);
-  fluid->SetKernelWidth(4.0);
+  fluid->SetMaxStep(0.75);
+  fluid->SetKernelWidth(20.0);
   fluid->Update();
 
   m_TemplateFluidDeformation = fluid->GetDisplacementField();

@@ -128,7 +128,7 @@ NegativeHCImageMatchMetric<TFixedImage, TMovingImage>
   m_Skips[1] = 1;
   m_Skips[2] = 1;
 
-  m_Alpha = 1.1;
+  m_Alpha = 1.25;
 
   m_DerivativeStepLengths = ParametersType(1);
   m_DerivativeStepLengths.Fill(1e-2);

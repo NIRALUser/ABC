@@ -73,6 +73,11 @@ protected:
   DynArray<double> m_SourcePoints;
   DynArray<double> m_TargetPoints;
 
+  double m_MinSource;
+  double m_MaxSource;
+  double m_MinTarget;
+  double m_MaxTarget;
+
   bool m_Modified;
 
   InputImagePointer m_OutputImage;

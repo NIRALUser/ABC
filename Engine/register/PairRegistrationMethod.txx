@@ -371,13 +371,13 @@ PairRegistrationMethod<TPixel>
   powell->SetInitialSteps(steps);
   powell->SetOrder(order);
   powell->SetMaximumIterations(10);
-  powell->SetBracketMaxStep(25.0);
+  powell->SetBracketMaxStep(10.0);
   powell->SetUseNewDirections(false);
 
-  amoeba->SetMaxIterations(50);
+  amoeba->SetMaxIterations(300);
   amoeba->SetInitialSimplexDeltas(steps);
-  amoeba->SetParameterTolerance(1e-2);
-  amoeba->SetFunctionTolerance(1e-2);
+  amoeba->SetParameterTolerance(1e-3);
+  amoeba->SetFunctionTolerance(1e-3);
 
   anneal->SetRandomWalkSteps(steps);
   anneal->SetBurnInIterations(20);
@@ -406,7 +406,7 @@ PairRegistrationMethod<TPixel>
 
 /*
   // ITK's MI metric
-  metric->SetNumberOfHistogramBins(255);
+  metric->SetNumberOfHistogramBins(200);
   unsigned int numSamples =
     fixedImg->GetLargestPossibleRegion().GetNumberOfPixels() / 5;
   if (numSamples > 500000)
@@ -466,6 +466,8 @@ PairRegistrationMethod<TPixel>
   powell->StartOptimization();
 
   affine->SetParameters(powell->GetCurrentPosition());
+
+  //affine->SetParameters(amoeba->GetCurrentPosition());
 
 /*
   // Powell only?

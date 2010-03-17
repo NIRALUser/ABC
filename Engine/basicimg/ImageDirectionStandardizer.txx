@@ -111,10 +111,47 @@ ImageDirectionStandardizer<TImage>
         dir[2][i] = -1.0;
         break;
 
+/*
+      case 'R':
+        dir[i][0] = 1.0;
+        dir[i][1] = 0.0;
+        dir[i][2] = 0.0;
+        break;
+      case 'L':
+        dir[i][0] = -1.0;
+        dir[i][1] = 0.0;
+        dir[i][2] = 0.0;
+        break;
+
+      case 'A':
+        dir[i][0] = 0.0;
+        dir[i][1] = 1.0;
+        dir[i][2] = 0.0;
+        break;
+      case 'P':
+        dir[i][0] = 0.0;
+        dir[i][1] = -1.0;
+        dir[i][2] = 0.0;
+        break;
+
+      case 'I':
+        dir[i][0] = 0.0;
+        dir[i][1] = 0.0;
+        dir[i][2] = 1.0;
+        break;
+      case 'S':
+        dir[i][0] = 0.0;
+        dir[i][1] = 0.0;
+        dir[i][2] = -1.0;
+        break;
+*/
+
       default:
        itkExceptionMacro(<< "Invalid orientation: " << s);
     }
   }
+
+//std::cout << "PP code " << s << " returning " << dir << std::endl;
 
   return dir;
 }
@@ -140,6 +177,8 @@ ImageDirectionStandardizer<TImage>
 
   typename OrienterType::Pointer orient = OrienterType::New();
 
+  orient->SetInput(img);
+
   if (itksys::SystemTools::Strucmp(dirstring.c_str(), "file") == 0)
   {
     orient->UseImageDirectionOn();
@@ -162,8 +201,6 @@ ImageDirectionStandardizer<TImage>
     orient->SetDesiredCoordinateDirection(
       this->_GetDirectionFromString(m_TargetOrientationCode) );
   }
-
-  orient->SetInput(img);
   orient->Update();
 
   ImagePointer out = orient->GetOutput();

@@ -26,7 +26,7 @@ EMSParameters
 
   m_MaxBiasDegree = 4;
 
-  m_AtlasWarpFluidIterations = 5;
+  m_AtlasWarpFluidIterations = 200;
 
   m_AtlasWarpGridX = 5;
   m_AtlasWarpGridY = 5;
