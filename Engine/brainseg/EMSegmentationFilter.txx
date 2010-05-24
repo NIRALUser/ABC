@@ -9,7 +9,6 @@
 #include "itkBinaryErodeImageFilter.h"
 #include "itkBoxMeanImageFilter.h"
 #include "itkBSplineDownsampleImageFilter.h"
-#include "itkDiscreteGaussianImageFilter.h"
 #include "itkNumericTraits.h"
 #include "itkResampleImageFilter.h"
 #include "itkWarpImageFilter.h"
@@ -2060,15 +2059,7 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
         it.Set( it.Get() + m_Posteriors[iclass]->GetPixel(it.GetIndex()) );
     }
 
-    typedef itk::DiscreteGaussianImageFilter<InputImageType, InputImageType>
-      BlurFilterType;
-    typename BlurFilterType::Pointer blurf = BlurFilterType::New();
-    blurf->SetInput(tmp);
-    blurf->SetVariance(minSpacing*minSpacing * 4.0);
-    blurf->Update();
-
-    //subjectPriors.Append(tmp);
-    subjectPriors.Append(blurf->GetOutput());
+    subjectPriors.Append(tmp);
   }
 
   DynArray<ProbabilityImagePointer> atlasPriors;
@@ -2099,20 +2090,10 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
   matcher->SetProbabilities(atlasPriors);
   matcher->Update();
 
-  typedef itk::DiscreteGaussianImageFilter<InputImageType, InputImageType> BlurFilterType;
-  typename BlurFilterType::Pointer blurf = BlurFilterType::New();
-  //blurf->SetInput(matcher->GetOutput());
-  blurf->SetInput(m_CorrectedImages[0]);
-  blurf->SetVariance(minSpacing*minSpacing * 4.0);
-  blurf->Update();
-
-  //InputImagePointer matchImg = blurf->GetOutput();
-
   InputImagePointer matchImg = matcher->GetOutput();
 
   DynArray<InputImagePointer> fixedSet;
-  //fixedSet.Append(m_CorrectedImages[0]);
-  fixedSet.Append(blurf->GetOutput());
+  fixedSet.Append(m_CorrectedImages[0]);
   fluid->SetFixedImages(fixedSet);
   DynArray<InputImagePointer> movingSet;
   movingSet.Append(matchImg);
@@ -2122,8 +2103,9 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
   fluid->SetInitialDisplacementField(m_TemplateFluidDeformation);
   //fluid->SetMask(m_OriginalMask);
   fluid->SetIterations(m_WarpFluidIterations);
-  fluid->SetMaxStep(0.75);
+  fluid->SetMaxStep(0.5);
   fluid->SetKernelWidth(20.0);
+  fluid->SetNumberOfScales(4);
   fluid->Update();
 
   m_TemplateFluidDeformation = fluid->GetDisplacementField();

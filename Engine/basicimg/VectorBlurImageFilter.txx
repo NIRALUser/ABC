@@ -4,6 +4,7 @@
 #include "VectorBlurImageFilter.h"
 
 #include "itkImageRegionIteratorWithIndex.h"
+#include "itkDiscreteGaussianImageFilter.h"
 #include "itkSmoothingRecursiveGaussianImageFilter.h"
 
 #include <vector>
@@ -59,15 +60,24 @@ VectorBlurImageFilter< TInputImage, TOutputImage>
       it.Set(this->GetInput()->GetPixel(ind)[dim]);
     }
 
+#if 1
     typedef itk::SmoothingRecursiveGaussianImageFilter<
       ScalarImageType, ScalarImageType>
       BlurFilterType;
-
     typename BlurFilterType::Pointer blurf = BlurFilterType::New();
     blurf->SetInput(tmp);
     blurf->SetSigma(m_KernelWidth);
     blurf->SetNormalizeAcrossScale(false);
     blurf->Update();
+#else
+    typedef itk::DiscreteGaussianImageFilter<
+      ScalarImageType, ScalarImageType>
+      BlurFilterType;
+    typename BlurFilterType::Pointer blurf = BlurFilterType::New();
+    blurf->SetInput(tmp);
+    blurf->SetVariance(m_KernelWidth*m_KernelWidth);
+    blurf->Update();
+#endif
 
     typename ScalarImageType::Pointer smoothtmp = blurf->GetOutput();
 

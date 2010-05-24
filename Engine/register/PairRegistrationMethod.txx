@@ -460,7 +460,8 @@ PairRegistrationMethod<TPixel>
   amoeba->StartOptimization();
 
   // Refine results using Powell's method
-  muLogMacro(<< "Refining registration at [2x2x2]...\n");
+  muLogMacro(<< "Refining registration at [1x1x1]...\n");
+  metric->SetSampleSpacing(1.0*minSpacing);
   powell->SetCostFunction(metric);
   powell->SetInitialPosition(amoeba->GetCurrentPosition());
   powell->StartOptimization();

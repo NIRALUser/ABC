@@ -50,7 +50,9 @@ public:
 
   void SetMask(MaskPointer m);
 
-  itkSetMacro(Iterations, unsigned int);
+  itkSetMacro(NumberOfScales, uint);
+
+  itkSetMacro(Iterations, uint);
   itkSetMacro(MaxStep, double);
 
   itkSetMacro(KernelWidth, double);
@@ -75,15 +77,17 @@ protected:
 
   //DeformationFieldPointer DeformationToDisplacement(DeformationFieldPointer h);
 
-  ImagePointer DownsampleImage(ImagePointer img);
-  ImagePointer UpsampleImage(ImagePointer img);
+  ImagePointer DownsampleImage(ImagePointer img, ImageSizeType sz, ImageSpacingType sp);
+  ImagePointer UpsampleImage(ImagePointer img, ImageSizeType sz, ImageSpacingType sp);
 
-  DeformationFieldPointer DownsampleDeformation(DeformationFieldPointer img);
-  DeformationFieldPointer UpsampleDeformation(DeformationFieldPointer img);
+  DeformationFieldPointer DownsampleDeformation(DeformationFieldPointer img, ImageSizeType sz, ImageSpacingType sp);
+
+  DeformationFieldPointer UpsampleDeformation(DeformationFieldPointer img, ImageSizeType sz, ImageSpacingType sp);
+  DeformationFieldPointer UpsampleDisplacement(DeformationFieldPointer img, ImageSizeType sz, ImageSpacingType sp);
 
   bool Step();
 
-  unsigned int m_Iterations;
+  uint m_Iterations;
   double m_MaxStep;
 
   double m_KernelWidth;
@@ -106,6 +110,10 @@ protected:
   DeformationFieldPointer m_InitialDisplacementField;
 
   bool m_Modified;
+
+  uint m_NumberOfScales;
+  DynArray<ImageSizeType> m_MultiScaleSizes;
+  DynArray<ImageSpacingType> m_MultiScaleSpacings;
 
 };
 

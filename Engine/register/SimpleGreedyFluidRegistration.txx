@@ -2,6 +2,7 @@
 #ifndef _SimpleGreedyFluidRegistration_txx
 #define _SimpleGreedyFluidRegistration_txx
 
+#include "itkBSplineInterpolateImageFunction.h"
 #include "itkDerivativeImageFilter.h"
 #include "itkImageDuplicator.h"
 #include "itkImageRegionIteratorWithIndex.h"
@@ -11,7 +12,11 @@
 #include "itkWarpImageFilter.h"
 #include "itkWarpVectorImageFilter.h"
 
+//#include "itkDiscreteGaussianImageFilter.h"
+#include "itkSmoothingRecursiveGaussianImageFilter.h"
 #include "VectorBlurImageFilter.h"
+
+#include "itkImageFileWriter.h"
 
 template <class TPixel, unsigned int Dimension>
 SimpleGreedyFluidRegistration<TPixel, Dimension>
@@ -21,6 +26,7 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
   m_MaxStep = 0.5;
   m_Delta = 0.0;
   m_KernelWidth = 1.0;
+  m_NumberOfScales = 3;
   m_Modified = false;
 }
 
@@ -60,24 +66,32 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
 template <class TPixel, unsigned int Dimension>
 typename SimpleGreedyFluidRegistration<TPixel, Dimension>::ImagePointer
 SimpleGreedyFluidRegistration<TPixel, Dimension>
-::DownsampleImage(ImagePointer img)
+::DownsampleImage(ImagePointer img, ImageSizeType downsize, ImageSpacingType downspacing)
 {
   ImageRegionType region = img->GetLargestPossibleRegion();
   ImageSizeType size = region.GetSize();
 
   ImageSpacingType spacing = img->GetSpacing();
 
-  ImageSizeType downsize;
+  double sigma = downspacing[0];
   for (uint dim = 0; dim < Dimension; dim++)
-    downsize[dim] = size[dim] / 2;
-  ImageSpacingType downspacing;
-  for (uint dim = 0; dim < Dimension; dim++)
-    downspacing[dim] = spacing[dim] * (double)size[dim] / (double)downsize[dim];
+    if (downspacing[dim] < sigma)
+      sigma = downspacing[dim];
+
+  typedef itk::SmoothingRecursiveGaussianImageFilter<ImageType, ImageType>
+  //typedef itk::DiscreteGaussianImageFilter<ImageType, ImageType>
+    BlurType;
+  typename BlurType::Pointer blurf = BlurType::New();
+  blurf->SetInput(img);
+  blurf->SetSigma(sigma);
+  //blurf->SetVariance(sigma*sigma);
+  blurf->Update();
 
   typedef itk::ResampleImageFilter<ImageType, ImageType>
     ResamplerType;
   typename ResamplerType::Pointer resf = ResamplerType::New();
-  resf->SetInput(img);
+  resf->SetInput(blurf->GetOutput());
+  resf->SetDefaultPixelValue(0);
   resf->SetOutputDirection(img->GetDirection());
   resf->SetOutputSpacing(downspacing);
   resf->SetOutputOrigin(img->GetOrigin());
@@ -90,13 +104,24 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
 template <class TPixel, unsigned int Dimension>
 typename SimpleGreedyFluidRegistration<TPixel, Dimension>::ImagePointer
 SimpleGreedyFluidRegistration<TPixel, Dimension>
-::UpsampleImage(ImagePointer img)
+::UpsampleImage(ImagePointer img, ImageSizeType upsize, ImageSpacingType upspacing)
 {
+  typedef itk::BSplineInterpolateImageFunction<ImageType, double, double>
+    SplineInterpolatorType;
+  typename SplineInterpolatorType::Pointer splineInt =
+    SplineInterpolatorType::New();
+  splineInt->SetSplineOrder(3);
+
   typedef itk::ResampleImageFilter<ImageType, ImageType>
     ResamplerType;
   typename ResamplerType::Pointer resf = ResamplerType::New();
   resf->SetInput(img);
-  resf->SetOutputParametersFromImage(m_FixedImages[0]);
+  resf->SetDefaultPixelValue(0);
+  resf->SetInterpolator(splineInt);
+  resf->SetOutputDirection(img->GetDirection());
+  resf->SetOutputSpacing(upspacing);
+  resf->SetOutputOrigin(img->GetOrigin());
+  resf->SetSize(upsize);
   resf->Update();
 
   return resf->GetOutput();
@@ -105,24 +130,20 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
 template <class TPixel, unsigned int Dimension>
 typename SimpleGreedyFluidRegistration<TPixel, Dimension>::DeformationFieldPointer
 SimpleGreedyFluidRegistration<TPixel, Dimension>
-::DownsampleDeformation(DeformationFieldPointer img)
+::DownsampleDeformation(DeformationFieldPointer img, ImageSizeType downsize, ImageSpacingType downspacing)
 {
   ImageRegionType region = img->GetLargestPossibleRegion();
   ImageSizeType size = region.GetSize();
 
   ImageSpacingType spacing = img->GetSpacing();
 
-  ImageSizeType downsize;
-  for (uint dim = 0; dim < Dimension; dim++)
-    downsize[dim] = size[dim] / 2;
-  ImageSpacingType downspacing;
-  for (uint dim = 0; dim < Dimension; dim++)
-    downspacing[dim] = spacing[dim] * (double)size[dim] / (double)downsize[dim];
-
   typedef itk::VectorResampleImageFilter<DeformationFieldType, DeformationFieldType>
     ResamplerType;
   typename ResamplerType::Pointer resf = ResamplerType::New();
   resf->SetInput(img);
+  DisplacementType zerov;
+  zerov.Fill(0.0);
+  resf->SetDefaultPixelValue(zerov);
   resf->SetOutputDirection(img->GetDirection());
   resf->SetOutputSpacing(downspacing);
   resf->SetOutputOrigin(img->GetOrigin());
@@ -135,16 +156,71 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
 template <class TPixel, unsigned int Dimension>
 typename SimpleGreedyFluidRegistration<TPixel, Dimension>::DeformationFieldPointer
 SimpleGreedyFluidRegistration<TPixel, Dimension>
-::UpsampleDeformation(DeformationFieldPointer img)
+::UpsampleDeformation(DeformationFieldPointer img, ImageSizeType upsize, ImageSpacingType upspacing)
 {
+
   typedef itk::VectorResampleImageFilter<DeformationFieldType, DeformationFieldType>
     ResamplerType;
   typename ResamplerType::Pointer resf = ResamplerType::New();
   resf->SetInput(img);
-  resf->SetOutputDirection(m_FixedImages[0]->GetDirection());
-  resf->SetOutputSpacing(m_FixedImages[0]->GetSpacing());
-  resf->SetOutputOrigin(m_FixedImages[0]->GetOrigin());
-  resf->SetSize(m_FixedImages[0]->GetLargestPossibleRegion().GetSize());
+  DisplacementType zerov;
+  zerov.Fill(sqrt(-1.0f));
+  resf->SetDefaultPixelValue(zerov);
+  resf->SetOutputDirection(img->GetDirection());
+  resf->SetOutputSpacing(upspacing);
+  resf->SetOutputOrigin(img->GetOrigin());
+  resf->SetSize(upsize);
+  resf->Update();
+
+  DeformationFieldPointer def = resf->GetOutput();
+
+  typedef itk::ImageRegionIteratorWithIndex<DeformationFieldType> IteratorType;
+  IteratorType it(def, def->GetLargestPossibleRegion());
+
+  for (it.GoToBegin(); !it.IsAtEnd(); ++it)
+  {
+    ImageIndexType ind = it.GetIndex();
+
+    DisplacementType h = def->GetPixel(ind);
+
+    ImagePointType p;
+    def->TransformIndexToPhysicalPoint(ind, p);
+
+    bool isout = false;
+    for (uint dim = 0; dim < Dimension; dim++)
+      if (vnl_math_isnan(h[dim]))
+      {
+        isout = true;
+        break;
+      }
+    if (isout)
+    {
+      for (uint dim = 0; dim < Dimension; dim++)
+        h[dim] = p[dim];
+      def->SetPixel(ind, h);
+    }
+  }
+
+  return def;
+}
+
+template <class TPixel, unsigned int Dimension>
+typename SimpleGreedyFluidRegistration<TPixel, Dimension>::DeformationFieldPointer
+SimpleGreedyFluidRegistration<TPixel, Dimension>
+::UpsampleDisplacement(DeformationFieldPointer img, ImageSizeType upsize, ImageSpacingType upspacing)
+{
+
+  typedef itk::VectorResampleImageFilter<DeformationFieldType, DeformationFieldType>
+    ResamplerType;
+  typename ResamplerType::Pointer resf = ResamplerType::New();
+  resf->SetInput(img);
+  DisplacementType zerov;
+  zerov.Fill(0.0);
+  resf->SetDefaultPixelValue(zerov);
+  resf->SetOutputDirection(img->GetDirection());
+  resf->SetOutputSpacing(upspacing);
+  resf->SetOutputOrigin(img->GetOrigin());
+  resf->SetSize(upsize);
   resf->Update();
 
   return resf->GetOutput();
@@ -158,12 +234,41 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
   if (!m_Modified)
     return;
 
+  if (m_Iterations < 5)
+    itkExceptionMacro(<< "Must have at least 5 iterations");
+
   if (m_FixedImages.GetSize() != m_MovingImages.GetSize())
     itkExceptionMacro(<< "Number of channels must match");
 
-  // Initialize out = input moving
+  uint numChannels = m_FixedImages.GetSize();
+
+  ImageSizeType size = m_FixedImages[0]->GetLargestPossibleRegion().GetSize();
+  ImageSpacingType spacing = m_FixedImages[0]->GetSpacing();
+
+  m_MultiScaleSizes.Clear();
+  m_MultiScaleSpacings.Clear();
+
+  m_MultiScaleSizes.Append(size);
+  m_MultiScaleSpacings.Append(spacing);
+
+  double downF = 2.0;
+  for (uint s = 0; s < (m_NumberOfScales-1); s++)
+  {
+    ImageSizeType downsize;
+    for (uint dim = 0; dim < Dimension; dim++)
+      downsize[dim] = size[dim] / downF;
+    ImageSpacingType downspacing;
+    for (uint dim = 0; dim < Dimension; dim++)
+      downspacing[dim] =
+       spacing[dim] * (double)size[dim] / (double)downsize[dim];
+    m_MultiScaleSizes.Append(downsize);
+    m_MultiScaleSpacings.Append(downspacing);
+    downF *= 2.0;
+  }
+
+  // Initialize output images and downsample
   m_OutputImages.Clear();
-  for (uint c = 0; c < m_MovingImages.GetSize(); c++)
+  for (uint c = 0; c < numChannels; c++)
   {
 /*
     typedef itk::ImageDuplicator<ImageType> DuperType;
@@ -172,24 +277,33 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
     dupef->Update();
     m_OutputImages.Append(dupef->GetOutput());
 */
-    m_OutputImages.Append(this->DownsampleImage(m_MovingImages[c]));
+    m_OutputImages.Append(
+      this->DownsampleImage(m_MovingImages[c],
+        m_MultiScaleSizes[m_NumberOfScales-1],
+        m_MultiScaleSpacings[m_NumberOfScales-1]) );
+
+/*
+if (c == 0)
+{
+typedef itk::ImageFileWriter<ImageType> WriterType;
+typename WriterType::Pointer w = WriterType::New();
+w->SetInput(m_OutputImages[c]);
+w->SetFileName("downimg_0.mha");
+w->Update();
+w->SetInput(this->UpsampleImage(m_OutputImages[c], m_MultiScaleSizes[m_NumberOfScales-2], m_MultiScaleSpacings[m_NumberOfScales-2]));
+w->SetFileName("downupimg_0.mha");
+w->Update();
+}
+*/
   }
 
-  // Downsample input images
-  m_DownFixedImages.Clear();
-  for (uint c = 0; c < m_FixedImages.GetSize(); c++)
-    m_DownFixedImages.Append(this->DownsampleImage(m_FixedImages[c]));
-  m_DownMovingImages.Clear();
-  for (uint c = 0; c < m_MovingImages.GetSize(); c++)
-    m_DownMovingImages.Append(this->DownsampleImage(m_MovingImages[c]));
-
-  // Initialize phi(x) = x
+  // Initialize H-field and downsample
   m_DeformationField = DeformationFieldType::New();
-  //m_DeformationField->CopyInformation(m_DownFixedImages[0]);
-  m_DeformationField->SetDirection(m_DownFixedImages[0]->GetDirection());
-  m_DeformationField->SetOrigin(m_DownFixedImages[0]->GetOrigin());
-  m_DeformationField->SetSpacing(m_DownFixedImages[0]->GetSpacing());
-  m_DeformationField->SetRegions(m_DownFixedImages[0]->GetLargestPossibleRegion());
+  //m_DeformationField->CopyInformation(m_FixedImages[0]);
+  m_DeformationField->SetDirection(m_FixedImages[0]->GetDirection());
+  m_DeformationField->SetOrigin(m_FixedImages[0]->GetOrigin());
+  m_DeformationField->SetSpacing(m_FixedImages[0]->GetSpacing());
+  m_DeformationField->SetRegions(m_FixedImages[0]->GetLargestPossibleRegion());
   m_DeformationField->Allocate();
 
   DisplacementType zerov;
@@ -197,35 +311,48 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
   m_DeformationField->FillBuffer(zerov);
 
   typedef itk::ImageRegionIteratorWithIndex<DeformationFieldType> IteratorType;
-  IteratorType it(m_DeformationField, m_DeformationField->GetLargestPossibleRegion());
 
-  for (it.GoToBegin(); !it.IsAtEnd(); ++it)
+  IteratorType h0It(m_DeformationField, m_DeformationField->GetLargestPossibleRegion());
+  for (h0It.GoToBegin(); !h0It.IsAtEnd(); ++h0It)
   {
     ImagePointType p;
-    m_DeformationField->TransformIndexToPhysicalPoint(it.GetIndex(), p);
-
+    m_DeformationField->TransformIndexToPhysicalPoint(h0It.GetIndex(), p);
     DisplacementType v;
     for (uint i = 0; i < Dimension; i++)
       v[i] = p[i];
-    it.Set(v);
+    h0It.Set(v);
   }
+  m_DeformationField =
+    this->DownsampleDeformation(
+      m_DeformationField,
+      m_MultiScaleSizes[m_NumberOfScales-1],
+      m_MultiScaleSpacings[m_NumberOfScales-1]);
 
   // Store displacement field as well
   m_DisplacementField = DeformationFieldType::New();
-  //m_DisplacementField->CopyInformation(m_DownFixedImages[0]);
-  m_DisplacementField->SetDirection(m_DownFixedImages[0]->GetDirection());
-  m_DisplacementField->SetOrigin(m_DownFixedImages[0]->GetOrigin());
-  m_DisplacementField->SetSpacing(m_DownFixedImages[0]->GetSpacing());
-  m_DisplacementField->SetRegions(m_DownFixedImages[0]->GetLargestPossibleRegion());
+  //m_DisplacementField->CopyInformation(m_FixedImages[0]);
+  m_DisplacementField->SetDirection(m_FixedImages[0]->GetDirection());
+  m_DisplacementField->SetOrigin(m_FixedImages[0]->GetOrigin());
+  m_DisplacementField->SetSpacing(m_FixedImages[0]->GetSpacing());
+  m_DisplacementField->SetRegions(m_FixedImages[0]->GetLargestPossibleRegion());
   m_DisplacementField->Allocate();
   m_DisplacementField->FillBuffer(zerov);
+  m_DisplacementField =
+    this->DownsampleDeformation(
+      m_DisplacementField,
+      m_MultiScaleSizes[m_NumberOfScales-1],
+      m_MultiScaleSpacings[m_NumberOfScales-1]);
 
   // Initialize using user-specified deformation if available
   if (!m_InitialDisplacementField.IsNull())
   {
     m_DisplacementField =
-      this->DownsampleDeformation(m_InitialDisplacementField);
+      this->DownsampleDeformation(
+        m_InitialDisplacementField,
+        m_MultiScaleSizes[m_NumberOfScales-1],
+        m_MultiScaleSpacings[m_NumberOfScales-1]);
 
+    IteratorType it(m_DeformationField, m_DeformationField->GetLargestPossibleRegion());
     for (it.GoToBegin(); !it.IsAtEnd(); ++it)
     {
       ImageIndexType ind = it.GetIndex();
@@ -242,46 +369,82 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
     }
 
     m_OutputImages.Clear();
-    for (uint ichan = 0; ichan < m_MovingImages.GetSize(); ichan++)
+    for (uint c = 0; c < numChannels; c++)
     {
       typedef itk::WarpImageFilter<
         ImageType, ImageType, DeformationFieldType>
         WarperType;
       typename WarperType::Pointer warpf = WarperType::New();
-      warpf->SetInput(m_DownMovingImages[ichan]);
+      warpf->SetInput(m_MovingImages[c]);
+      warpf->SetEdgePaddingValue(0.0);
       warpf->SetDeformationField(m_DisplacementField);
       warpf->SetOutputDirection(m_DeformationField->GetDirection());
       warpf->SetOutputOrigin(m_DeformationField->GetOrigin());
       warpf->SetOutputSpacing(m_DeformationField->GetSpacing());
       warpf->Update();
-      m_OutputImages.Append(warpf->GetOutput());
+      m_OutputImages.Append(
+        this->DownsampleImage(
+          warpf->GetOutput(),
+          m_MultiScaleSizes[m_NumberOfScales-1],
+          m_MultiScaleSpacings[m_NumberOfScales-1]) );
     }
-  }
+  } // if h init exist
 
-  // Initialize delta
-  m_Delta = 0.0;
-
-  // Greedy optimization
-  for (uint iter = 1; iter <= m_Iterations; iter++)
+  for (long s = (m_NumberOfScales-1); s >= 0; s--)
   {
-    bool converge = this->Step();
-    if (converge)
-      break;
+    ImageSizeType currsize = m_MultiScaleSizes[s];
+    ImageSpacingType currspacing = m_MultiScaleSpacings[s];
+
+    if (s == 0)
+    {
+      m_DownFixedImages = m_FixedImages;
+      m_DownMovingImages = m_MovingImages;
+    }
+    else
+    {
+      m_DownFixedImages.Clear();
+      m_DownMovingImages.Clear();
+      for (uint c = 0; c < numChannels; c++)
+      {
+        m_DownFixedImages.Append(
+          this->DownsampleImage(m_FixedImages[c], currsize, currspacing) );
+        m_DownMovingImages.Append(
+          this->DownsampleImage(m_MovingImages[c], currsize, currspacing) );
+      }
+    }
+
+    if (s < (m_NumberOfScales-1))
+    {
+      for (uint c = 0; c < numChannels; c++)
+        m_OutputImages[c] = this->UpsampleImage(
+          m_OutputImages[c], currsize, currspacing); 
+      m_DeformationField = this->UpsampleDeformation(
+        m_DeformationField, currsize, currspacing);
+      m_DisplacementField = this->UpsampleDisplacement(
+        m_DisplacementField, currsize, currspacing);
+    }
+
+    // Greedy optimization
+    m_Delta = 0.0;
+    for (uint iter = 1; iter <= m_Iterations; iter++)
+    {
+      bool converge = this->Step();
+      if (converge)
+        break;
+    }
+
   }
 
-  // Upsample deformations
-  m_DeformationField = this->UpsampleDeformation(m_DeformationField);
-  m_DisplacementField = this->UpsampleDeformation(m_DisplacementField);
-
-  // Warp images
+  // Warp images using final deformation
   m_OutputImages.Clear();
-  for (uint ichan = 0; ichan < m_MovingImages.GetSize(); ichan++)
+  for (uint ichan = 0; ichan < numChannels; ichan++)
   {
     typedef itk::WarpImageFilter<
       ImageType, ImageType, DeformationFieldType>
       WarperType;
     typename WarperType::Pointer warpf = WarperType::New();
     warpf->SetInput(m_MovingImages[ichan]);
+    warpf->SetEdgePaddingValue(0.0);
     warpf->SetDeformationField(m_DisplacementField);
     warpf->SetOutputDirection(m_DeformationField->GetDirection());
     warpf->SetOutputOrigin(m_DeformationField->GetOrigin());
@@ -301,12 +464,17 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
   uint numChannels = m_DownFixedImages.GetSize();
 
   // Find scale adjustment
-  ImageSpacingType spacing = m_DownFixedImages[0]->GetSpacing();
+  ImageSpacingType spacing = m_FixedImages[0]->GetSpacing();
   double minSpacing = spacing[0];
   for (uint i = 1; i < Dimension; i++)
     if (spacing[i] < minSpacing)
       minSpacing = spacing[i];
 
+  ImageSizeType size = m_DownFixedImages[0]->GetLargestPossibleRegion().GetSize();
+
+  DisplacementType edgev;
+  //edgev.Fill(vnl_huge_val(0.0f));
+  edgev.Fill(sqrt(-1.0f));
   DisplacementType zerov;
   zerov.Fill(0.0);
 
@@ -361,7 +529,6 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
 
   typedef VectorBlurImageFilter<DeformationFieldType, DeformationFieldType>
     DeformationSmootherType;
-
   typename DeformationSmootherType::Pointer defsmoother = DeformationSmootherType::New();
   defsmoother->SetKernelWidth(adjustedWidth);
   defsmoother->SetInput(velocF);
@@ -384,26 +551,31 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
   // Update delta at initial step
   if (m_Delta == 0.0)
   {
-    m_Delta = m_MaxStep * minSpacing / maxVeloc;
+    m_Delta = m_MaxStep * minSpacing / (maxVeloc + 1e-20);
   }
 
   // Test for convergence
-  if ((maxVeloc*m_Delta) < (1e-10*minSpacing))
-    return true;
+  //if ((maxVeloc*m_Delta) < (1e-10*minSpacing))
+  //  return true;
+
+  double adaptDelta = m_Delta;
+  if ((maxVeloc*m_Delta) > (m_MaxStep*minSpacing))
+    adaptDelta = m_MaxStep * minSpacing / (maxVeloc + 1e-20);
 
   for (it.GoToBegin(); !it.IsAtEnd(); ++it)
   {
-    it.Set(it.Get() * m_Delta);
+    it.Set(it.Get() * adaptDelta);
   }
 
   // Compose velocity field
-  // h(x) = h( g(x) ) where g(x) = x + v
+  // new h(x) <= h( g(x) ) where g(x) = x + v
   typedef itk::WarpVectorImageFilter<
     DeformationFieldType, DeformationFieldType, DeformationFieldType>
     ComposerType;
   typename ComposerType::Pointer compf = ComposerType::New();
   compf->SetInput(m_DeformationField);
   compf->SetDeformationField(velocF);
+  compf->SetEdgePaddingValue(edgev);
   compf->SetOutputDirection(m_DeformationField->GetDirection());
   compf->SetOutputOrigin(m_DeformationField->GetOrigin());
   compf->SetOutputSpacing(m_DeformationField->GetSpacing());
@@ -415,14 +587,30 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
   {
     ImageIndexType ind = it.GetIndex();
 
+    DisplacementType h = m_DeformationField->GetPixel(ind);
+
     ImagePointType p;
     m_DeformationField->TransformIndexToPhysicalPoint(ind, p);
+
+    bool isout = false;
+    for (uint dim = 0; dim < Dimension; dim++)
+      //if (vnl_math_isinf(h[dim]))
+      if (vnl_math_isnan(h[dim]))
+      {
+        isout = true;
+        break;
+      }
+    if (isout)
+    {
+      for (uint dim = 0; dim < Dimension; dim++)
+        h[dim] = p[dim];
+      m_DeformationField->SetPixel(ind, h);
+    }
 
     DisplacementType u;
     for (uint i = 0; i < Dimension; i++)
       u[i] = p[i];
-    m_DisplacementField->SetPixel(ind,
-      m_DeformationField->GetPixel(ind) - u);
+    m_DisplacementField->SetPixel(ind, h - u);
   }
 
   // Warp images
@@ -434,6 +622,7 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
       WarperType;
     typename WarperType::Pointer warpf = WarperType::New();
     warpf->SetInput(m_DownMovingImages[ichan]);
+    warpf->SetEdgePaddingValue(0.0);
     warpf->SetDeformationField(m_DisplacementField);
     warpf->SetOutputDirection(m_DeformationField->GetDirection());
     warpf->SetOutputOrigin(m_DeformationField->GetOrigin());
