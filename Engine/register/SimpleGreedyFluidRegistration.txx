@@ -464,7 +464,7 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
   uint numChannels = m_DownFixedImages.GetSize();
 
   // Find scale adjustment
-  ImageSpacingType spacing = m_FixedImages[0]->GetSpacing();
+  ImageSpacingType spacing = m_DownFixedImages[0]->GetSpacing();
   double minSpacing = spacing[0];
   for (uint i = 1; i < Dimension; i++)
     if (spacing[i] < minSpacing)
@@ -559,8 +559,8 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
   //  return true;
 
   double adaptDelta = m_Delta;
-  if ((maxVeloc*m_Delta) > (m_MaxStep*minSpacing))
-    adaptDelta = m_MaxStep * minSpacing / (maxVeloc + 1e-20);
+  //if ((maxVeloc*m_Delta) > (m_MaxStep*minSpacing))
+  //  adaptDelta = m_MaxStep * minSpacing / (maxVeloc + 1e-20);
 
   for (it.GoToBegin(); !it.IsAtEnd(); ++it)
   {

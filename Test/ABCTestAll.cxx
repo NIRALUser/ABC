@@ -47,7 +47,7 @@ std::cout << "Testing ABC with atlas at " << atlasdir << " and data at " << data
     emsp->SetAtlasDirectory(atlasdir);
     emsp->SetOutputDirectory(outdir);
     emsp->SetDoAtlasWarp(true);
-    emsp->SetAtlasWarpFluidIterations(20);
+    emsp->SetAtlasWarpFluidIterations(10);
     emsp->SetFilterIterations(50);
     emsp->SetMaxBiasDegree(2);
 

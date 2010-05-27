@@ -2104,8 +2104,8 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
   //fluid->SetMask(m_OriginalMask);
   fluid->SetIterations(m_WarpFluidIterations);
   fluid->SetMaxStep(0.5);
-  fluid->SetKernelWidth(20.0);
-  fluid->SetNumberOfScales(4);
+  fluid->SetKernelWidth(10.0);
+  fluid->SetNumberOfScales(3);
   fluid->Update();
 
   m_TemplateFluidDeformation = fluid->GetDisplacementField();
