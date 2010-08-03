@@ -17,7 +17,6 @@ template <class TImage>
 ImageDirectionStandardizer<TImage>
 ::ImageDirectionStandardizer()
 {
-  m_TargetOrientationCode = "RAI";
   m_TargetImageOrientation.SetIdentity();
 }
 
@@ -45,6 +44,7 @@ ImageDirectionStandardizer<TImage>
   if (itksys::SystemTools::Strucmp(s.c_str(), "RPS") != 0)
     return itk::SpatialOrientation::ITK_COORDINATE_ORIENTATION_RPS;
 
+//TODO:
   if (itksys::SystemTools::Strucmp(s.c_str(), "LAI") != 0)
     return itk::SpatialOrientation::ITK_COORDINATE_ORIENTATION_LAI;
 
@@ -111,47 +111,11 @@ ImageDirectionStandardizer<TImage>
         dir[2][i] = -1.0;
         break;
 
-/*
-      case 'R':
-        dir[i][0] = 1.0;
-        dir[i][1] = 0.0;
-        dir[i][2] = 0.0;
-        break;
-      case 'L':
-        dir[i][0] = -1.0;
-        dir[i][1] = 0.0;
-        dir[i][2] = 0.0;
-        break;
-
-      case 'A':
-        dir[i][0] = 0.0;
-        dir[i][1] = 1.0;
-        dir[i][2] = 0.0;
-        break;
-      case 'P':
-        dir[i][0] = 0.0;
-        dir[i][1] = -1.0;
-        dir[i][2] = 0.0;
-        break;
-
-      case 'I':
-        dir[i][0] = 0.0;
-        dir[i][1] = 0.0;
-        dir[i][2] = 1.0;
-        break;
-      case 'S':
-        dir[i][0] = 0.0;
-        dir[i][1] = 0.0;
-        dir[i][2] = -1.0;
-        break;
-*/
-
       default:
        itkExceptionMacro(<< "Invalid orientation: " << s);
-    }
-  }
+    } // switch
 
-//std::cout << "PP code " << s << " returning " << dir << std::endl;
+  } // for
 
   return dir;
 }
@@ -161,8 +125,10 @@ void
 ImageDirectionStandardizer<TImage>
 ::SetTargetDirectionFromString(ImageType* img, std::string& s)
 {
-  m_TargetOrientationCode = s;
-  m_TargetImageOrientation = img->GetDirection();
+  if (itksys::SystemTools::Strucmp(s.c_str(), "file") == 0)
+    m_TargetImageOrientation = img->GetDirection();
+  else
+    m_TargetImageOrientation = this->_GetDirectionFromString(s);
 }
 
 template <class TImage>
@@ -177,35 +143,28 @@ ImageDirectionStandardizer<TImage>
 
   typename OrienterType::Pointer orient = OrienterType::New();
 
-  orient->SetInput(img);
+  orient->UseImageDirectionOff();
 
   if (itksys::SystemTools::Strucmp(dirstring.c_str(), "file") == 0)
   {
-    orient->UseImageDirectionOn();
     orient->SetGivenCoordinateDirection(img->GetDirection());
   }
   else
   {
-    orient->UseImageDirectionOff();
-    ImageDirectionType cosm = this->_GetDirectionFromString(dirstring);
-    orient->SetGivenCoordinateDirection(cosm);
+    ImageDirectionType dir = this->_GetDirectionFromString(dirstring);
+    orient->SetGivenCoordinateDirection(dir);
   }
 
-  if (itksys::SystemTools::Strucmp(m_TargetOrientationCode.c_str(), "file")
-      == 0)
-  {
-    orient->SetDesiredCoordinateDirection(m_TargetImageOrientation);
-  }
-  else
-  {
-    orient->SetDesiredCoordinateDirection(
-      this->_GetDirectionFromString(m_TargetOrientationCode) );
-  }
+  orient->SetDesiredCoordinateDirection(m_TargetImageOrientation);
+
+  orient->SetInput(img);
   orient->Update();
 
-  ImagePointer out = orient->GetOutput();
+  ImagePointer outimg = orient->GetOutput();
+  // NOTE: BUG in itk orient filter?
+  outimg->SetDirection(m_TargetImageOrientation);
 
-  return out;
+  return outimg;
 
 }
 

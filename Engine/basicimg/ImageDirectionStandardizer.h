@@ -48,7 +48,6 @@ protected:
   ImageDirectionType _GetDirectionFromString(std::string& s);
 
   ImageDirectionType m_TargetImageOrientation;
-  std::string m_TargetOrientationCode;
 
 };
 

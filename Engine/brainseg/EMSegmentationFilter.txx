@@ -538,7 +538,7 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
       StructElementType> DilateType;
 
   StructElementType structel;
-  structel.SetRadius(7);
+  structel.SetRadius(5);
   structel.CreateStructuringElement();
 
   typename DilateType::Pointer dil = DilateType::New();

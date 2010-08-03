@@ -6,8 +6,9 @@
 
 #include <iostream>
 
-#include <stdlib.h>
-#include <time.h>
+#include <cmath>
+#include <cstdlib>
+#include <ctime>
 
 template <class T>
 RNG<T>

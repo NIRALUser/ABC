@@ -80,6 +80,9 @@ protected:
   ImagePointer DownsampleImage(ImagePointer img, ImageSizeType sz, ImageSpacingType sp);
   ImagePointer UpsampleImage(ImagePointer img, ImageSizeType sz, ImageSpacingType sp);
 
+  //MaskPointer DownsampleMask(MaskPointer img, ImageSizeType sz, ImageSpacingType sp);
+  //MaskPointer UpsampleMask(MaskPointer img, ImageSizeType sz, ImageSpacingType sp);
+
   DeformationFieldPointer DownsampleDeformation(DeformationFieldPointer img, ImageSizeType sz, ImageSpacingType sp);
 
   DeformationFieldPointer UpsampleDeformation(DeformationFieldPointer img, ImageSizeType sz, ImageSpacingType sp);

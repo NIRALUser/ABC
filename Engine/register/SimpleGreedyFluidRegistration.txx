@@ -7,6 +7,7 @@
 #include "itkImageDuplicator.h"
 #include "itkImageRegionIteratorWithIndex.h"
 #include "itkLinearInterpolateImageFunction.h"
+#include "itkNearestNeighborInterpolateImageFunction.h"
 #include "itkResampleImageFilter.h"
 #include "itkVectorResampleImageFilter.h"
 #include "itkWarpImageFilter.h"
