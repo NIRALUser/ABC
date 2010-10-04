@@ -49,6 +49,7 @@ public:
   Fl_Input *atlasOrientInput;
   Fl_Check_Button *warpAtlasButton;
   Fl_Input *fluidItersInput;
+  Fl_Input *fluidMaxStepInput;
   Fl_Group *tab2;
   Fl_Browser *imageBrowser;
 private:

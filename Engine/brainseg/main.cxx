@@ -39,7 +39,7 @@ main(int argc, char** argv)
   bool debugflag = false;
   bool writeflag = true;
 
-  for (unsigned int i = 2; i < argc; i++)
+  for (int i = 2; i < argc; i++)
   {
     if (strcmp(argv[i], "--debug") == 0)
       debugflag = true;

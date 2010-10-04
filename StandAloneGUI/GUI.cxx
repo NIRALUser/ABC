@@ -257,7 +257,7 @@ Fl_Menu_Item GUI::menu_[] = {
 Fl_Double_Window* GUI::MakeWindow() {
   { aboutwindow = new Fl_Double_Window(612, 668, "ABC: About");
     aboutwindow->user_data((void*)(this));
-    { Fl_Box* o = new Fl_Box(5, 5, 600, 600, "\r\nABC (Atlas Based Classification) GUI v1.0\r\nNormal brain segmentation fr\
+    { Fl_Box* o = new Fl_Box(5, 5, 600, 600, "\r\nABC (Atlas Based Classification) GUI v1.1\r\nNormal brain segmentation fr\
 om MRI\r\n\r\nMarcel Prastawa\r\nprastawa@@sci.utah.edu\r\nhttp://www.sci.utah\
 .edu/~prastawa\r\n\r\nThis software is provided for research purposes only\r\n\
 \r\nImplemented using FLTK and ITK\r\nhttp://www.fltk.org\r\nhttp://www.itk.or\
@@ -345,6 +345,8 @@ ield correction of MR images of the brain. IEEE TMI 1999; 18:885-896\r\n");
         } // Fl_Box* o
         { fluidItersInput = new Fl_Input(303, 429, 40, 30, "Fluid iterations:");
         } // Fl_Input* fluidItersInput
+        { fluidMaxStepInput = new Fl_Input(470, 429, 40, 30, "Fluid max step:");
+        } // Fl_Input* fluidMaxStepInput
         tab1->end();
       } // Fl_Group* tab1
       { tab2 = new Fl_Group(10, 65, 595, 450, "Step 2");
@@ -511,6 +513,9 @@ p->SetDoAtlasWarp(warpAtlasButton->value() != 0);
 
 p->SetAtlasWarpFluidIterations(atoi(fluidItersInput->value()));
 
+
+p->SetAtlasWarpFluidMaxStep(atof(fluidMaxStepInput->value()));
+
 return p;
 }
 
@@ -581,5 +586,11 @@ warpAtlasButton->value(p->GetDoAtlasWarp());
 std::stringstream oss;
 oss << p->GetAtlasWarpFluidIterations() << std::ends;
 fluidItersInput->value(oss.str().c_str());
+}
+
+{
+std::stringstream oss;
+oss << p->GetAtlasWarpFluidMaxStep() << std::ends;
+fluidMaxStepInput->value(oss.str().c_str());
 }
 }

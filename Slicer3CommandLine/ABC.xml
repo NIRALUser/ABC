@@ -188,5 +188,14 @@ This work is part of the National Alliance for Medical Image Computing (NAMIC), 
     <longflag>--atlasFluidIters</longflag>
     <default>10</default>
     </integer>
+
+    <float>
+    <name>atlasFluidMaxStep</name>
+    <label>Atlas Warping Fluid Maximum Step</label>
+    <description>Maximum step size for fluid gradient descent</description>
+    <longflag>--atlasFluidMaxStep</longflag>
+    <default>0.5</default>
+    </float>
+
   </parameters>
 </executable>

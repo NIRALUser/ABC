@@ -197,7 +197,7 @@ AmoebaOptimizer
   {
     m_CurrentIteration++;
 
-    double oldValue = m_Value;
+    //double oldValue = m_Value;
 
     // Find the worst, next-worst, and best values
     unsigned int iworst = 0;

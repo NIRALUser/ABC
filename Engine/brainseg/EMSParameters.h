@@ -65,12 +65,8 @@ public:
   itkGetMacro(AtlasWarpFluidIterations, unsigned int);
   itkSetMacro(AtlasWarpFluidIterations, unsigned int);
 
-  itkGetMacro(AtlasWarpGridX, unsigned int);
-  itkSetMacro(AtlasWarpGridX, unsigned int);
-  itkGetMacro(AtlasWarpGridY, unsigned int);
-  itkSetMacro(AtlasWarpGridY, unsigned int);
-  itkGetMacro(AtlasWarpGridZ, unsigned int);
-  itkSetMacro(AtlasWarpGridZ, unsigned int);
+  itkGetMacro(AtlasWarpFluidMaxStep, float);
+  itkSetMacro(AtlasWarpFluidMaxStep, float);
 
   void AppendPriorWeight(double w)
   { m_PriorWeights.push_back(w); }
@@ -100,9 +96,7 @@ protected:
 
   unsigned int m_AtlasWarpFluidIterations;
 
-  unsigned int m_AtlasWarpGridX;
-  unsigned int m_AtlasWarpGridY;
-  unsigned int m_AtlasWarpGridZ;
+  float m_AtlasWarpFluidMaxStep;
 
   std::string m_OutputDirectory;
   std::string m_OutputFormat;

@@ -69,11 +69,9 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
 
   m_DoWarp = false;
 
-  m_WarpGrid[0] = 5;
-  m_WarpGrid[1] = 5;
-  m_WarpGrid[2] = 5;
-
   m_WarpFluidIterations = 10;
+
+  m_WarpFluidMaxStep = 0.5;
 
 }
 
@@ -1935,92 +1933,6 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
     if (spacing[dim] < minSpacing)
       minSpacing = spacing[dim];
 
-#if 0
-  muLogMacro(<< "Computing B-spline transform, with grid "
-   << m_WarpGrid[0] << " x " << m_WarpGrid[1] << " x " << m_WarpGrid[2]
-   << "...\n");
-
-  // Downsample first corrected image
-  // Reduce memory cost when using large # of samples for computing MI
-  InputImagePointer downImg;
-  {
-    typedef itk::BoxMeanImageFilter<InputImageType, InputImageType>
-      SmoothFilterType;
-    typename SmoothFilterType::Pointer smoothf = SmoothFilterType::New();
-    smoothf->SetInput(m_CorrectedImages[0]);
-    smoothf->SetRadius(3);
-    smoothf->Update();
-
-    typedef itk::BSplineDownsampleImageFilter<InputImageType, InputImageType>
-      DownsamplerType;
-    typename DownsamplerType::Pointer downres = DownsamplerType::New();
-    downres->SetInput(smoothf->GetOutput());
-    downres->Update();
-
-    downImg = downres->GetOutput();
-  }
-
-  // Compute B-spline
-  m_TemplateBSplineTransform =
-    PairRegistrationMethod<InputImagePixelType>::
-      //RegisterBSpline(m_CorrectedImages[0], m_TemplateImage,
-      RegisterBSpline(downImg, m_TemplateImage,
-        m_WarpGrid[0], m_WarpGrid[1], m_WarpGrid[2],
-        PairRegistrationMethod<InputImagePixelType>::QuantizeNone,
-        //PairRegistrationMethod<InputImagePixelType>::QuantizeFixed,
-        m_OriginalMask
-//TODO: use current brain mask instead?
-      );
-
-  // Warp template
-  {
-    muLogMacro(<< "  Warping template...\n");
-
-    typedef itk::ResampleImageFilter<InputImageType, InputImageType>
-      ResamplerType;
-    typename ResamplerType::Pointer warper = ResamplerType::New();
-
-    warper->SetInput(m_TemplateImage);
-    warper->SetTransform(m_TemplateBSplineTransform);
-
-    //warper->SetInterpolator(linearInt); // Default is linear
-    warper->SetOutputParametersFromImage(m_InputImages[0]);
-    warper->SetDefaultPixelValue(0);
-
-    warper->Update();
-
-// Cumulative warp???
-// Can't -- need to be able to combine spline trafos
-    m_WarpedTemplateImage = warper->GetOutput();
-  }
-
-  // Warp priors
-  for (unsigned int k = 0; k < m_Priors.GetSize(); k++)
-  {
-    muLogMacro(<< "  Warping prior " << k+1 << "...\n");
-
-// Must keep orig priors if we're not doing cumulative warps
-
-    typedef itk::ResampleImageFilter<InputImageType, InputImageType>
-      ResamplerType;
-    typename ResamplerType::Pointer warper = ResamplerType::New();
-
-    warper->SetInput(m_OriginalPriors[k]);
-    warper->SetTransform(m_TemplateBSplineTransform);
-
-    //warper->SetInterpolator(linearInt); // Default is linear
-    warper->SetOutputParametersFromImage(m_InputImages[0]);
-    warper->SetDefaultPixelValue(0);
-
-    warper->Update();
-
-    m_Priors[k] = warper->GetOutput();
-  }
-
-  // Update mask
-  this->ComputeMask();
-#endif
-
   muLogMacro(<< "Computing fluid warping with " << m_WarpFluidIterations
     << " iterations\n");
 
@@ -2103,7 +2015,7 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
   fluid->SetInitialDisplacementField(m_TemplateFluidDeformation);
   //fluid->SetMask(m_OriginalMask);
   fluid->SetIterations(m_WarpFluidIterations);
-  fluid->SetMaxStep(0.5);
+  fluid->SetMaxStep(m_WarpFluidMaxStep);
   fluid->SetKernelWidth(10.0);
   fluid->SetNumberOfScales(3);
   fluid->Update();

@@ -131,20 +131,10 @@ EMSParametersXMLFileReader
     unsigned int i = atoi(m_CurrentString.c_str());
     m_PObject->SetAtlasWarpFluidIterations(i);
   }
-  else if(itksys::SystemTools::Strucmp(name,"ATLAS-WARP-GRID-X") == 0)
+  else if(itksys::SystemTools::Strucmp(name,"ATLAS-WARP-FLUID-MAX-STEP") == 0)
   {
-    unsigned int i = atoi(m_CurrentString.c_str());
-    m_PObject->SetAtlasWarpGridX(i);
-  }
-  else if(itksys::SystemTools::Strucmp(name,"ATLAS-WARP-GRID-Y") == 0)
-  {
-    unsigned int i = atoi(m_CurrentString.c_str());
-    m_PObject->SetAtlasWarpGridY(i);
-  }
-  else if(itksys::SystemTools::Strucmp(name,"ATLAS-WARP-GRID-Z") == 0)
-  {
-    unsigned int i = atoi(m_CurrentString.c_str());
-    m_PObject->SetAtlasWarpGridZ(i);
+    double ms = atof(m_CurrentString.c_str());
+    m_PObject->SetAtlasWarpFluidMaxStep(ms);
   }
   else if(itksys::SystemTools::Strucmp(name,"ATLAS-LINEAR-MAP-TYPE") == 0)
   {
@@ -264,12 +254,11 @@ EMSParametersXMLFileWriter
   WriteField<bool>(this, "DO-ATLAS-WARP", p->GetDoAtlasWarp(), output);
 
   WriteField<unsigned int>(this, "ATLAS-WARP-FLUID-ITERATIONS", p->GetAtlasWarpFluidIterations(), output);
-
-  WriteField<unsigned int>(this, "ATLAS-WARP-GRID-X", p->GetAtlasWarpGridX(), output);
-  WriteField<unsigned int>(this, "ATLAS-WARP-GRID-Y", p->GetAtlasWarpGridY(), output);
-  WriteField<unsigned int>(this, "ATLAS-WARP-GRID-Z", p->GetAtlasWarpGridZ(), output);
+  
+  WriteField<float>(this, "ATLAS-WARP-FLUID-MAX-STEP", p->GetAtlasWarpFluidMaxStep(), output);
 
   WriteField<std::string>(this, "ATLAS-LINEAR-MAP-TYPE", p->GetAtlasLinearMapType(), output);
+
   WriteField<std::string>(this, "IMAGE-LINEAR-MAP-TYPE", p->GetImageLinearMapType(), output);
 
   // Finish

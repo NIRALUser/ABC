@@ -167,6 +167,7 @@ int run_ABC(int argc, char** argv)
     segfilter->WarpingOff();
 
   segfilter->SetWarpFluidIterations(atlasFluidIters);
+  segfilter->SetWarpFluidMaxStep(atlasFluidMaxStep);
 
   segfilter->Update();
 

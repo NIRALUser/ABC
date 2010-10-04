@@ -145,13 +145,11 @@ public:
 
   itkGetMacro(WarpedTemplateImage, InputImagePointer);
 
-  void SetWarpGrid(unsigned int* g)
-  { m_WarpGrid[0] = g[0]; m_WarpGrid[1] = g[1]; m_WarpGrid[2] = g[2]; }
-  void SetWarpGrid(unsigned int gx, unsigned int gy, unsigned int gz)
-  { m_WarpGrid[0] = gx; m_WarpGrid[1] = gy; m_WarpGrid[2] = gz; }
-
   itkGetConstMacro(WarpFluidIterations, unsigned int);
   itkSetMacro(WarpFluidIterations, unsigned int);
+
+  itkGetConstMacro(WarpFluidMaxStep, double);
+  itkSetMacro(WarpFluidMaxStep, double);
 
 protected:
 
@@ -230,11 +228,11 @@ private:
 
   BSplineTransformPointer m_TemplateBSplineTransform;
 
-  unsigned int m_WarpGrid[3];
-
   DeformationFieldPointer m_TemplateFluidDeformation;
 
   unsigned int m_WarpFluidIterations;
+
+  double m_WarpFluidMaxStep;
 
   double m_WarpLikelihoodTolerance;
 

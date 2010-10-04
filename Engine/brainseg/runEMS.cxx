@@ -144,17 +144,10 @@ runEMS(EMSParameters* emsp, bool debugflag, bool writemoreflag)
   muLogMacro(
     << "Max bias polynomial degree: " << emsp->GetMaxBiasDegree() << "\n");
   muLogMacro(<< "Atlas warping: " << emsp->GetDoAtlasWarp() << "\n");
-/*
-// Deprecated
-  muLogMacro(
-    << "Atlas warp spline grid size: " << emsp->GetAtlasWarpGridX() << " X "
-    << emsp->GetAtlasWarpGridY() << " X "
-    << emsp->GetAtlasWarpGridZ() << "\n");
-*/
   muLogMacro(
     << "Atlas warp fluid iterations: " << emsp->GetAtlasWarpFluidIterations()
     << "\n");
-
+  muLogMacro(<< "Atlas warp fluid max step: " << emsp->GetAtlasWarpFluidMaxStep() << "\n");
   muLogMacro(<< "\n");
 
   muLogMacro(<< "=== Start ===\n");
@@ -337,12 +330,8 @@ runEMS(EMSParameters* emsp, bool debugflag, bool writemoreflag)
     segfilter->WarpingOn();
   else
     segfilter->WarpingOff();
-  segfilter->SetWarpGrid(
-    emsp->GetAtlasWarpGridX(), 
-    emsp->GetAtlasWarpGridY(), 
-    emsp->GetAtlasWarpGridZ());
   segfilter->SetWarpFluidIterations(emsp->GetAtlasWarpFluidIterations());
-
+  segfilter->SetWarpFluidMaxStep(emsp->GetAtlasWarpFluidMaxStep());
   segfilter->Update();
 
   DynArray<std::string> names = emsp->GetImages();

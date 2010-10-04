@@ -28,9 +28,7 @@ EMSParameters
 
   m_AtlasWarpFluidIterations = 200;
 
-  m_AtlasWarpGridX = 5;
-  m_AtlasWarpGridY = 5;
-  m_AtlasWarpGridZ = 5;
+  m_AtlasWarpFluidMaxStep = 0.5;
 
   //m_PriorWeights = std::vector<double>(4, 1.0);
 
@@ -111,15 +109,9 @@ EMSParameters
     os << "Prior " << i+1 << " = " << m_PriorWeights[i] << std::endl;
   if (m_DoAtlasWarp)
   {
-/*
-// Deprecated
-    os << "Atlas warping, grid = "
-       << m_AtlasWarpGridX << "x"
-       << m_AtlasWarpGridY << "x"
-       << m_AtlasWarpGridZ << std::endl;
-*/
-    os << "Atlas warping, with " << m_AtlasWarpFluidIterations
-      << " fluid iterations" << std::endl;
+    os << "Fluid atlas warping, with:" << std::endl;
+    os << " - iterations = " << m_AtlasWarpFluidIterations << std::endl;
+    os << " - max step" << m_AtlasWarpFluidMaxStep << std::endl;
   }
   else
   {
