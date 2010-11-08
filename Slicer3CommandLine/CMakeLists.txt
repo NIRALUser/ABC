@@ -6,11 +6,21 @@ cmake_minimum_required(VERSION 2.6)
 # Find Slicer3. This will locate all the components needed to build modules 
 # for Slicer3.
 #
-FIND_PACKAGE(Slicer3 REQUIRED)
+FIND_PACKAGE(Slicer3 QUIET)
 IF (Slicer3_FOUND)
   INCLUDE(${Slicer3_USE_FILE})    
 ELSE (Slicer3_FOUND)
-  MESSAGE(ERROR "Cannot build without a Slicer3 build tree or a Slicer3 installation. Please set Slicer3_DIR. If using a Slicer3 build, Slicer3_DIR needs to be set to the root of the build tree of Slicer3.  If using an installation of Slicer3, Slicer3_DIR needs to be set to <SlicerInstallation>/lib/Slicer3.")
+  FIND_PACKAGE(ITK REQUIRED)
+  IF (ITK_FOUND)
+    INCLUDE(${USE_ITK_FILE})
+  ELSE(ITK_FOUND)
+    MESSAGE(FATAL_ERROR, "ITK not found. Please set ITK_DIR.")
+  ENDIF (ITK_FOUND)
+
+  FIND_PACKAGE(GenerateCLP REQUIRED)
+  IF(GenerateCLP_FOUND)
+    INCLUDE(${GenerateCLP_USE_FILE})
+  ENDIF(GenerateCLP_FOUND)
 ENDIF (Slicer3_FOUND)
 
 ###
@@ -62,8 +72,10 @@ TARGET_LINK_LIBRARIES (${CLP}
 #
 # Install into a local plugins directory
 #
-set(TARGETS ABC)
-foreach(targ ${TARGETS})
-  slicer3_set_plugins_output_path(${targ})
-endforeach(targ ${TARGETS})
-slicer3_install_plugins(${TARGETS})
+IF (Slicer3_FOUND)
+  set(TARGETS ABC)
+  foreach(targ ${TARGETS})
+    slicer3_set_plugins_output_path(${targ})
+  endforeach(targ ${TARGETS})
+  slicer3_install_plugins(${TARGETS})
+ENDIF (Slicer3_FOUND)
