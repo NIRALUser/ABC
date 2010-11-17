@@ -50,9 +50,9 @@ public:
 
   void SetMask(MaskPointer m);
 
-  itkSetMacro(NumberOfScales, uint);
+  itkSetMacro(NumberOfScales, unsigned int);
 
-  itkSetMacro(Iterations, uint);
+  itkSetMacro(Iterations, unsigned int);
   itkSetMacro(MaxStep, double);
 
   itkSetMacro(KernelWidth, double);
@@ -90,7 +90,7 @@ protected:
 
   bool Step();
 
-  uint m_Iterations;
+  unsigned int m_Iterations;
   double m_MaxStep;
 
   double m_KernelWidth;
@@ -114,7 +114,7 @@ protected:
 
   bool m_Modified;
 
-  uint m_NumberOfScales;
+  unsigned int m_NumberOfScales;
   DynArray<ImageSizeType> m_MultiScaleSizes;
   DynArray<ImageSpacingType> m_MultiScaleSpacings;
 

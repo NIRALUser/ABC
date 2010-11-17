@@ -15,7 +15,7 @@
 // Object for doing argsort
 struct IDouble{
   double v;
-  uint i;
+  unsigned int i;
   bool operator < ( const IDouble& arg ) const
   {
     return v < arg.v;
@@ -50,7 +50,7 @@ double
 IntensityMatcher<TInputImage, TProbImage>
 ::EvaluatePoint(double x)
 {
-  uint numClasses = m_SourcePoints.GetSize();
+  unsigned int numClasses = m_SourcePoints.GetSize();
 
   double x1, x2;
   double y1, y2;
@@ -83,7 +83,7 @@ IntensityMatcher<TInputImage, TProbImage>
     return v;
   }
 
-  uint c = 0;
+  unsigned int c = 0;
   for (; c < (numClasses-1); c++)
   {
     if (x >= m_SourcePoints[c] && x <= m_SourcePoints[c+1])
@@ -124,7 +124,7 @@ IntensityMatcher<TInputImage, TProbImage>
   if (!m_Modified)
     return;
 
-  uint numClasses = m_Probs.GetSize();
+  unsigned int numClasses = m_Probs.GetSize();
 
   // Estimate class intensities
   m_SourcePoints.Initialize(numClasses, 0.0);
@@ -159,16 +159,16 @@ IntensityMatcher<TInputImage, TProbImage>
     if (v_t > m_MaxTarget)
       m_MaxTarget = v_t;
 
-    for (uint c = 0; c < numClasses; c++)
+    for (unsigned int c = 0; c < numClasses; c++)
     {
-      double p = pow(m_Probs[c]->GetPixel(ind), 2.0);
+      double p = pow((double)m_Probs[c]->GetPixel(ind), (double)2.0);
       m_SourcePoints[c] += p * v_s;
       m_TargetPoints[c] += p * v_t;
       sumProbs[c] += p;
     }
   }
 
-  for (uint c = 0; c < numClasses; c++)
+  for (unsigned int c = 0; c < numClasses; c++)
   {
     m_SourcePoints[c] /= sumProbs[c];
     m_TargetPoints[c] /= sumProbs[c];
@@ -181,7 +181,7 @@ IntensityMatcher<TInputImage, TProbImage>
 
   // Sort based on the source points
   Heap<IDouble> heap;
-  for (uint c = 0; c < numClasses; c++)
+  for (unsigned int c = 0; c < numClasses; c++)
   {
     IDouble d;
     d.v = m_SourcePoints[c];
@@ -192,10 +192,10 @@ IntensityMatcher<TInputImage, TProbImage>
   DynArray<double> oldSourcePoints = m_SourcePoints;
   DynArray<double> oldTargetPoints = m_TargetPoints;
 
-  for (uint c = 0; c < numClasses; c++)
+  for (unsigned int c = 0; c < numClasses; c++)
   {
     IDouble min = heap.ExtractMinimum();
-    uint i = min.i;
+    unsigned int i = min.i;
     m_SourcePoints[c] = oldSourcePoints[i];
     m_TargetPoints[c] = oldTargetPoints[i];
   }

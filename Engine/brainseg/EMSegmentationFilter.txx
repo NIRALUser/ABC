@@ -1929,7 +1929,7 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
 
   InputImageSpacingType spacing = m_CorrectedImages[0]->GetSpacing();
   double minSpacing = spacing[0];
-  for (uint dim = 1; dim < 3; dim++)
+  for (unsigned int dim = 1; dim < 3; dim++)
     if (spacing[dim] < minSpacing)
       minSpacing = spacing[dim];
 
