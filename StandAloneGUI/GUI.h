@@ -14,8 +14,8 @@
 #include <FL/Fl_Group.H>
 #include <FL/Fl_Output.H>
 #include <FL/Fl_Check_Button.H>
-#include <FL/Fl_Browser.H>
 #include <FL/Fl_Choice.H>
+#include <FL/Fl_Browser.H>
 #include <FL/Fl_Menu_Bar.H>
 
 class GUI {
@@ -50,6 +50,12 @@ public:
   Fl_Check_Button *warpAtlasButton;
   Fl_Input *fluidItersInput;
   Fl_Input *fluidMaxStepInput;
+  Fl_Choice *InitialDistributionEstimatorChoice;
+  static Fl_Menu_Item menu_InitialDistributionEstimatorChoice[];
+  Fl_Choice *AtlasLinearMapTypeChoice;
+  static Fl_Menu_Item menu_AtlasLinearMapTypeChoice[];
+  Fl_Choice *ImageLinearMapTypeChoice;
+  static Fl_Menu_Item menu_ImageLinearMapTypeChoice[];
   Fl_Group *tab2;
   Fl_Browser *imageBrowser;
 private:

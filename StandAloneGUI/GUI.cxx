@@ -49,6 +49,26 @@ void GUI::cb_Change(Fl_Button* o, void* v) {
   ((GUI*)(o->parent()->parent()->parent()->user_data()))->cb_Change_i(o,v);
 }
 
+Fl_Menu_Item GUI::menu_InitialDistributionEstimatorChoice[] = {
+ {"robust", 0,  0, 0, 0, FL_NORMAL_LABEL, 0, 14, 0},
+ {"standard", 0,  0, 0, 0, FL_NORMAL_LABEL, 0, 14, 0},
+ {0,0,0,0,0,0,0,0,0}
+};
+
+Fl_Menu_Item GUI::menu_AtlasLinearMapTypeChoice[] = {
+ {"affine", 0,  0, 0, 0, FL_NORMAL_LABEL, 0, 14, 0},
+ {"rigid", 0,  0, 0, 0, FL_NORMAL_LABEL, 0, 14, 0},
+ {"id", 0,  0, 0, 0, FL_NORMAL_LABEL, 0, 14, 0},
+ {0,0,0,0,0,0,0,0,0}
+};
+
+Fl_Menu_Item GUI::menu_ImageLinearMapTypeChoice[] = {
+ {"affine", 0,  0, 0, 0, FL_NORMAL_LABEL, 0, 14, 0},
+ {"rigid", 0,  0, 0, 0, FL_NORMAL_LABEL, 0, 14, 0},
+ {"id", 0,  0, 0, 0, FL_NORMAL_LABEL, 0, 14, 0},
+ {0,0,0,0,0,0,0,0,0}
+};
+
 void GUI::cb_Add_i(Fl_Button*, void*) {
   char* fn = fl_file_chooser("Add image...", "{*.hdr,*.gipl,*.mha,*.mhd}", NULL, 0);
 if (fn == NULL)
@@ -294,62 +314,84 @@ ield correction of MR images of the brain. IEEE TMI 1999; 18:885-896\r\n");
     } // Fl_Box* o
     runwindow->end();
   } // Fl_Double_Window* runwindow
-  { mainwindow = new Fl_Double_Window(600, 535, "ABC");
+  { mainwindow = new Fl_Double_Window(600, 645, "ABC");
     mainwindow->user_data((void*)(this));
-    { Fl_Tabs* o = new Fl_Tabs(0, 35, 620, 500);
+    { Fl_Tabs* o = new Fl_Tabs(0, 35, 620, 610);
       o->box(FL_UP_BOX);
-      { tab1 = new Fl_Group(10, 65, 595, 450, "Step 1");
+      { tab1 = new Fl_Group(10, 65, 605, 575, "Step 1");
         tab1->align(129);
-        { Fl_Button* o = new Fl_Button(500, 480, 80, 30, "Next");
+        { Fl_Button* o = new Fl_Button(500, 605, 80, 30, "Next");
           o->callback((Fl_Callback*)cb_Next);
         } // Fl_Button* o
         { suffixInput = new Fl_Input(64, 110, 300, 30, "Suffix");
         } // Fl_Input* suffixInput
-        { atlasdirOutput = new Fl_Output(127, 203, 365, 30, "Atlas Directory:");
+        { atlasdirOutput = new Fl_Output(127, 185, 365, 30, "Atlas Directory:");
           atlasdirOutput->color(FL_DARK1);
         } // Fl_Output* atlasdirOutput
-        { Fl_Box* o = new Fl_Box(25, 74, 580, 30, "String used to tag all output files (e.g. case1)");
+        { Fl_Box* o = new Fl_Box(25, 75, 580, 30, "String used to tag all output files (e.g. case1)");
           o->box(FL_FLAT_BOX);
           o->color((Fl_Color)175);
           o->align(FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
         } // Fl_Box* o
-        { Fl_Box* o = new Fl_Box(25, 164, 580, 30, "Where we can find the spatial priors and template");
+        { Fl_Box* o = new Fl_Box(25, 150, 580, 30, "Where we can find the spatial priors and template");
           o->box(FL_FLAT_BOX);
           o->color((Fl_Color)175);
           o->align(FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
         } // Fl_Box* o
-        { Fl_Box* o = new Fl_Box(25, 319, 580, 30, "Prior weight adjustments (space separated, e.g. 1 1 1 1)");
+        { Fl_Box* o = new Fl_Box(25, 300, 580, 30, "Prior weight adjustments (space separated, e.g. 1 1 1 1)");
           o->box(FL_FLAT_BOX);
           o->color((Fl_Color)175);
           o->align(FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
         } // Fl_Box* o
-        { prWeightsInput = new Fl_Input(75, 354, 400, 30, "Coefs:");
+        { prWeightsInput = new Fl_Input(75, 335, 400, 30, "Coefs:");
         } // Fl_Input* prWeightsInput
-        { Fl_Button* o = new Fl_Button(500, 203, 80, 30, "Change");
+        { Fl_Button* o = new Fl_Button(500, 185, 80, 30, "Change");
           o->callback((Fl_Callback*)cb_Change);
         } // Fl_Button* o
-        { Fl_Box* o = new Fl_Box(25, 243, 580, 30, "Orientation of atlas images, permutations of R/L, A/P, I/S (e.g. RAI, ASR)");
+        { Fl_Box* o = new Fl_Box(25, 225, 580, 30, "Orientation of atlas images, permutations of R/L, A/P, I/S (e.g. RAI, ASR)");
           o->box(FL_FLAT_BOX);
           o->color((Fl_Color)175);
           o->align(FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
         } // Fl_Box* o
-        { atlasOrientInput = new Fl_Input(135, 278, 300, 30, "Atlas Orientation");
+        { atlasOrientInput = new Fl_Input(135, 260, 300, 30, "Atlas Orientation");
         } // Fl_Input* atlasOrientInput
-        { warpAtlasButton = new Fl_Check_Button(25, 431, 25, 25, "Warp atlas to subject");
+        { warpAtlasButton = new Fl_Check_Button(25, 560, 25, 30, "Warp atlas to subject");
           warpAtlasButton->down_box(FL_DOWN_BOX);
         } // Fl_Check_Button* warpAtlasButton
-        { Fl_Box* o = new Fl_Box(25, 393, 580, 30, "Deformable registration of atlas to subject");
+        { Fl_Box* o = new Fl_Box(25, 525, 580, 30, "Deformable registration of atlas to subject");
           o->box(FL_FLAT_BOX);
           o->color((Fl_Color)175);
           o->align(FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
         } // Fl_Box* o
-        { fluidItersInput = new Fl_Input(303, 429, 40, 30, "Fluid iterations:");
+        { fluidItersInput = new Fl_Input(303, 560, 40, 30, "Fluid iterations:");
         } // Fl_Input* fluidItersInput
-        { fluidMaxStepInput = new Fl_Input(470, 429, 40, 30, "Fluid max step:");
+        { fluidMaxStepInput = new Fl_Input(470, 560, 40, 30, "Fluid max step:");
         } // Fl_Input* fluidMaxStepInput
+        { Fl_Box* o = new Fl_Box(25, 375, 580, 30, "Initial distribution estimator");
+          o->box(FL_FLAT_BOX);
+          o->color((Fl_Color)175);
+          o->align(FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
+        } // Fl_Box* o
+        { InitialDistributionEstimatorChoice = new Fl_Choice(207, 410, 100, 30, "Initial distribution estimator: ");
+          InitialDistributionEstimatorChoice->down_box(FL_BORDER_BOX);
+          InitialDistributionEstimatorChoice->menu(menu_InitialDistributionEstimatorChoice);
+        } // Fl_Choice* InitialDistributionEstimatorChoice
+        { Fl_Box* o = new Fl_Box(25, 450, 580, 30, "Linear mapping type:");
+          o->box(FL_FLAT_BOX);
+          o->color((Fl_Color)175);
+          o->align(FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
+        } // Fl_Box* o
+        { AtlasLinearMapTypeChoice = new Fl_Choice(171, 485, 100, 30, "Atlas linear map type: ");
+          AtlasLinearMapTypeChoice->down_box(FL_BORDER_BOX);
+          AtlasLinearMapTypeChoice->menu(menu_AtlasLinearMapTypeChoice);
+        } // Fl_Choice* AtlasLinearMapTypeChoice
+        { ImageLinearMapTypeChoice = new Fl_Choice(447, 485, 100, 30, "Image linear map type: ");
+          ImageLinearMapTypeChoice->down_box(FL_BORDER_BOX);
+          ImageLinearMapTypeChoice->menu(menu_ImageLinearMapTypeChoice);
+        } // Fl_Choice* ImageLinearMapTypeChoice
         tab1->end();
       } // Fl_Group* tab1
-      { tab2 = new Fl_Group(10, 65, 595, 450, "Step 2");
+      { tab2 = new Fl_Group(10, 65, 595, 575, "Step 2");
         tab2->hide();
         { imageBrowser = new Fl_Browser(25, 128, 450, 120, "Images:");
           imageBrowser->type(2);
@@ -380,7 +422,7 @@ mage in the list");
         } // Fl_Input* filterIterInput
         { filterDtInput = new Fl_Input(259, 359, 80, 30, "Time Step:");
         } // Fl_Input* filterDtInput
-        { Fl_Button* o = new Fl_Button(500, 480, 80, 30, "Next");
+        { Fl_Button* o = new Fl_Button(500, 605, 80, 30, "Next");
           o->callback((Fl_Callback*)cb_Next1);
         } // Fl_Button* o
         { Fl_Box* o = new Fl_Box(25, 399, 580, 30, "Maximum degree of the bias field polynomial");
@@ -402,7 +444,7 @@ mage in the list");
         } // Fl_Choice* filterMethodChoice
         tab2->end();
       } // Fl_Group* tab2
-      { tab3 = new Fl_Group(10, 65, 600, 450, "Step 3");
+      { tab3 = new Fl_Group(10, 65, 600, 575, "Step 3");
         tab3->hide();
         { outdirOutput = new Fl_Output(145, 116, 350, 30, "Output Directory:");
           outdirOutput->color(FL_DARK1);
@@ -424,14 +466,14 @@ mage in the list");
         { Fl_Button* o = new Fl_Button(500, 116, 80, 30, "Change");
           o->callback((Fl_Callback*)cb_Change2);
         } // Fl_Button* o
-        { Fl_Button* o = new Fl_Button(500, 480, 80, 30, "Next");
+        { Fl_Button* o = new Fl_Button(500, 605, 80, 30, "Next");
           o->callback((Fl_Callback*)cb_Next2);
         } // Fl_Button* o
         tab3->end();
       } // Fl_Group* tab3
-      { tab4 = new Fl_Group(10, 65, 595, 450, "Step 4");
+      { tab4 = new Fl_Group(10, 65, 595, 575, "Step 4");
         tab4->hide();
-        { Fl_Button* o = new Fl_Button(500, 480, 80, 30, "Run");
+        { Fl_Button* o = new Fl_Button(500, 605, 80, 30, "Run");
           o->callback((Fl_Callback*)cb_Run);
         } // Fl_Button* o
         { debugCheck = new Fl_Check_Button(25, 114, 500, 30, "Write debug messages to terminal");
@@ -484,6 +526,28 @@ p->ClearPriorWeights();
 std::string buf;
 while (ss >> buf)
   p->AppendPriorWeight(atof(buf.c_str()));
+
+int i = InitialDistributionEstimatorChoice->value();
+if (i == 0)
+  p->SetInitialDistributionEstimator("robust");
+else
+  p->SetInitialDistributionEstimator("standard");
+
+int a = AtlasLinearMapTypeChoice->value();
+if (a == 0)
+  p->SetAtlasLinearMapType("affine");
+else if (a == 1)
+  p->SetAtlasLinearMapType("rigid");
+else
+  p->SetAtlasLinearMapType("id");
+
+int l = ImageLinearMapTypeChoice->value();
+if (l == 0)
+  p->SetImageLinearMapType("affine");
+else if (l == 1)
+  p->SetImageLinearMapType("rigid");
+else
+  p->SetImageLinearMapType("id");
 
 int f = formatChoice->value();
 if (f == 0)

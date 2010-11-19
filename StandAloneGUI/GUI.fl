@@ -95,14 +95,14 @@ orientwindow->set_non_modal();}
     }
     Fl_Window mainwindow {
       label ABC open
-      xywh {1124 366 600 535} type Double visible
+      xywh {881 280 600 645} type Double visible
     } {
       Fl_Tabs {} {open
-        xywh {0 35 620 500} box UP_BOX
+        xywh {0 35 620 610} box UP_BOX
       } {
         Fl_Group tab1 {
           label {Step 1} open
-          xywh {10 65 595 450} align 129
+          xywh {10 65 605 575} align 129
         } {
           Fl_Button {} {
             label Next
@@ -111,7 +111,7 @@ tab3->hide();
 tab4->hide();
 
 tab2->show();}
-            xywh {500 480 80 30}
+            xywh {500 605 80 30}
           }
           Fl_Input suffixInput {
             label Suffix
@@ -119,23 +119,23 @@ tab2->show();}
           }
           Fl_Output atlasdirOutput {
             label {Atlas Directory:}
-            xywh {127 203 365 30} color 47
+            xywh {127 185 365 30} color 47
           }
           Fl_Box {} {
             label {String used to tag all output files (e.g. case1)}
-            xywh {25 74 580 30} box FLAT_BOX color 175 align 20
+            xywh {25 75 580 30} box FLAT_BOX color 175 align 20
           }
           Fl_Box {} {
             label {Where we can find the spatial priors and template}
-            xywh {25 164 580 30} box FLAT_BOX color 175 align 20
+            xywh {25 150 580 30} box FLAT_BOX color 175 align 20
           }
           Fl_Box {} {
             label {Prior weight adjustments (space separated, e.g. 1 1 1 1)}
-            xywh {25 319 580 30} box FLAT_BOX color 175 align 20
+            xywh {25 300 580 30} box FLAT_BOX color 175 align 20
           }
           Fl_Input prWeightsInput {
             label {Coefs:}
-            xywh {75 354 400 30}
+            xywh {75 335 400 30}
           }
           Fl_Button {} {
             label Change
@@ -143,36 +143,91 @@ tab2->show();}
 if (dir == NULL)
   return;
 atlasdirOutput->value(dir);}
-            xywh {500 203 80 30}
+            xywh {500 185 80 30}
           }
           Fl_Box {} {
             label {Orientation of atlas images, permutations of R/L, A/P, I/S (e.g. RAI, ASR)}
-            xywh {25 243 580 30} box FLAT_BOX color 175 align 20
+            xywh {25 225 580 30} box FLAT_BOX color 175 align 20
           }
           Fl_Input atlasOrientInput {
             label {Atlas Orientation}
-            xywh {135 278 300 30}
+            xywh {135 260 300 30}
           }
           Fl_Check_Button warpAtlasButton {
             label {Warp atlas to subject}
-            xywh {25 431 25 25} down_box DOWN_BOX
+            xywh {25 560 25 30} down_box DOWN_BOX
           }
           Fl_Box {} {
             label {Deformable registration of atlas to subject}
-            xywh {25 393 580 30} box FLAT_BOX color 175 align 20
+            xywh {25 525 580 30} box FLAT_BOX color 175 align 20
           }
           Fl_Input fluidItersInput {
             label {Fluid iterations:}
-            xywh {303 429 40 30}
+            xywh {303 560 40 30}
           }
           Fl_Input fluidMaxStepInput {
             label {Fluid max step:}
-            xywh {470 429 40 30}
+            xywh {470 560 40 30}
+          }
+          Fl_Box {} {
+            label {Initial distribution estimator}
+            xywh {25 375 580 30} box FLAT_BOX color 175 align 20
+          }
+          Fl_Choice InitialDistributionEstimatorChoice {
+            label {Initial distribution estimator: } open
+            xywh {207 410 100 30} down_box BORDER_BOX
+          } {
+            MenuItem {} {
+              label robust
+              xywh {0 0 100 20}
+            }
+            MenuItem {} {
+              label standard
+              xywh {0 0 100 20}
+            }
+          }
+          Fl_Box {} {
+            label {Linear mapping type:}
+            xywh {25 450 580 30} box FLAT_BOX color 175 align 20
+          }
+          Fl_Choice AtlasLinearMapTypeChoice {
+            label {Atlas linear map type: } open
+            xywh {171 485 100 30} down_box BORDER_BOX
+          } {
+            MenuItem {} {
+              label affine
+              xywh {0 0 100 20}
+            }
+            MenuItem {} {
+              label rigid
+              xywh {0 0 100 20}
+            }
+            MenuItem {} {
+              label id
+              xywh {0 0 100 20}
+            }
+          }
+          Fl_Choice ImageLinearMapTypeChoice {
+            label {Image linear map type: } open
+            xywh {447 485 100 30} down_box BORDER_BOX
+          } {
+            MenuItem {} {
+              label affine
+              xywh {0 0 100 20}
+            }
+            MenuItem {} {
+              label rigid
+              xywh {0 0 100 20}
+            }
+            MenuItem {} {
+              label id
+              xywh {0 0 100 20}
+            }
           }
         }
         Fl_Group tab2 {
           label {Step 2} open
-          xywh {10 65 595 450} hide
+          xywh {10 65 595 575} hide
         } {
           Fl_Browser imageBrowser {
             label {Images:}
@@ -230,7 +285,7 @@ tab2->hide();
 tab4->hide();
 
 tab3->show();}
-            xywh {500 480 80 30}
+            xywh {500 605 80 30}
           }
           Fl_Box {} {
             label {Maximum degree of the bias field polynomial}
@@ -276,7 +331,7 @@ orientwindow->set_modal();}
         }
         Fl_Group tab3 {
           label {Step 3} open
-          xywh {10 65 600 450} hide
+          xywh {10 65 600 575} hide
         } {
           Fl_Output outdirOutput {
             label {Output Directory:}
@@ -326,12 +381,12 @@ tab2->hide();
 tab3->hide();
 
 tab4->show();}
-            xywh {500 480 80 30}
+            xywh {500 605 80 30}
           }
         }
         Fl_Group tab4 {
           label {Step 4} open
-          xywh {10 65 595 450} hide
+          xywh {10 65 595 575} hide
         } {
           Fl_Button {} {
             label Run
@@ -370,7 +425,7 @@ catch (...)
 
 runwindow->hide();
 mainwindow->show();}
-            xywh {500 480 80 30}
+            xywh {500 605 80 30}
           }
           Fl_Check_Button debugCheck {
             label {Write debug messages to terminal}
@@ -443,7 +498,7 @@ if (!writeEMSParametersXML(fn, p))
         } {
           MenuItem {} {
             label About
-            callback {aboutwindow->show();}
+            callback {aboutwindow->show();} selected
             xywh {0 0 100 20}
           }
         }
@@ -478,6 +533,28 @@ p->ClearPriorWeights();
 std::string buf;
 while (ss >> buf)
   p->AppendPriorWeight(atof(buf.c_str()));
+
+int i = InitialDistributionEstimatorChoice->value();
+if (i == 0)
+  p->SetInitialDistributionEstimator("robust");
+else
+  p->SetInitialDistributionEstimator("standard");
+
+int a = AtlasLinearMapTypeChoice->value();
+if (a == 0)
+  p->SetAtlasLinearMapType("affine");
+else if (a == 1)
+  p->SetAtlasLinearMapType("rigid");
+else
+  p->SetAtlasLinearMapType("id");
+
+int l = ImageLinearMapTypeChoice->value();
+if (l == 0)
+  p->SetImageLinearMapType("affine");
+else if (l == 1)
+  p->SetImageLinearMapType("rigid");
+else
+  p->SetImageLinearMapType("id");
 
 int f = formatChoice->value();
 if (f == 0)
@@ -586,7 +663,6 @@ fluidItersInput->value(oss.str().c_str());
 std::stringstream oss;
 oss << p->GetAtlasWarpFluidMaxStep() << std::ends;
 fluidMaxStepInput->value(oss.str().c_str());
-}} {selected
-    }
+}} {}
   }
 } 
