@@ -18,6 +18,7 @@
   <ORIENTATION>file</ORIENTATION>
 </IMAGE>
 
+<!-- Filter parameters: Filter method default is "Curvature flow", can be "Grad aniso diffusion" instead -->
 <FILTER-ITERATIONS>10</FILTER-ITERATIONS>
 <FILTER-TIME-STEP>0.01</FILTER-TIME-STEP>
 <FILTER-METHOD>Curvature flow</FILTER-METHOD>
@@ -29,8 +30,11 @@
 <PRIOR>0.7</PRIOR>
 <PRIOR>1</PRIOR>
 
+<!-- Initial Distribution estimator: default is "robust", can be "standard" instead -->
+<INITIAL-DISTRIBUTION-ESTIMATOR>robust</INITIAL-DISTRIBUTION-ESTIMATOR>
+
 <DO-ATLAS-WARP>1</DO-ATLAS-WARP>
-<ATLAS-WARP-FLUID-ITERATIONS>200</ATLAS-WARP-FLUID-ITERATIONS>
+<ATLAS-WARP-FLUID-ITERATIONS>10</ATLAS-WARP-FLUID-ITERATIONS>
 <ATLAS-WARP-FLUID-MAX-STEP>0.5</ATLAS-WARP-FLUID-MAX-STEP>
 
 <!-- Mapping types: default is affine, can be rigid or id instead -->
