@@ -9,7 +9,7 @@
   <description>
 Utah-UNC atlas based segmentation pipeline. Generates output images after bias correction and co-registration along with segmentation label image.
   </description>
-  <version>1.1</version>
+  <version>1.4</version>
   <contributor>Marcel Prastawa prastawa@sci.utah.edu</contributor>
   <documentation-url>
   http://www.nitrc.org/projects/abc
@@ -25,7 +25,7 @@ This work is part of the National Alliance for Medical Image Computing (NAMIC), 
 
     <image>
       <name>inputImage1</name>
-      <longflag>--inputImage1</longflag>
+      <longflag>inputImage1</longflag>
       <description>Input 1</description>
       <label>Input image 1</label>
       <channel>input</channel>
@@ -33,7 +33,7 @@ This work is part of the National Alliance for Medical Image Computing (NAMIC), 
 
     <image>
       <name>inputImage2</name>
-      <longflag>--inputImage2</longflag>
+      <longflag>inputImage2</longflag>
       <description>Input 2</description>
       <label>Input image 2</label>
       <channel>input</channel>
@@ -41,7 +41,7 @@ This work is part of the National Alliance for Medical Image Computing (NAMIC), 
 
     <image>
       <name>inputImage3</name>
-      <longflag>--inputImage3</longflag>
+      <longflag>inputImage3</longflag>
       <description>Input 3</description>
       <label>Input image 3</label>
       <channel>input</channel>
@@ -49,7 +49,7 @@ This work is part of the National Alliance for Medical Image Computing (NAMIC), 
 
     <image>
       <name>inputImage4</name>
-      <longflag>--inputImage4</longflag>
+      <longflag>inputImage4</longflag>
       <description>Input 4</description>
       <label>Input image 4</label>
       <channel>input</channel>
@@ -57,7 +57,7 @@ This work is part of the National Alliance for Medical Image Computing (NAMIC), 
 
     <image>
       <name>inputImage5</name>
-      <longflag>--inputImage5</longflag>
+      <longflag>inputImage5</longflag>
       <description>Input 5</description>
       <label>Input image 5</label>
       <channel>input</channel>
@@ -73,7 +73,7 @@ This work is part of the National Alliance for Medical Image Computing (NAMIC), 
     <name>atlasDir</name>
     <label>Atlas Directory</label>
     <flag>a</flag>
-    <longflag>--atlasDir</longflag>
+    <longflag>atlasDir</longflag>
     <channel>input</channel>
     </directory>
 
@@ -81,14 +81,14 @@ This work is part of the National Alliance for Medical Image Computing (NAMIC), 
     <name>atlasOrient</name>
     <label>Atlas Orientation</label>
     <flag>u</flag>
-    <longflag>--atlasOrient</longflag>
+    <longflag>atlasOrient</longflag>
     <default>RAI</default>
     </string>
 
     <float-vector>
     <name>priorAdjustVec</name>
     <label>Prior weight adjustments (same as number of priors)</label>
-    <longflag>--priorAdjust</longflag>
+    <longflag>priorAdjust</longflag>
     <default>1,1,1,1</default>
     </float-vector>
 
@@ -100,7 +100,7 @@ This work is part of the National Alliance for Medical Image Computing (NAMIC), 
 
     <image type="label">
       <name>labelImage</name>
-      <longflag>--outputLabel</longflag>
+      <longflag>outputLabel</longflag>
       <description>Output label image</description>
       <label>Output label image</label>
       <channel>output</channel>
@@ -108,7 +108,7 @@ This work is part of the National Alliance for Medical Image Computing (NAMIC), 
 
     <image>
       <name>outputImage1</name>
-      <longflag>--outputImage1</longflag>
+      <longflag>outputImage1</longflag>
       <description>Output 1</description>
       <label>Bias corrected output image 1</label>
       <channel>output</channel>
@@ -116,7 +116,7 @@ This work is part of the National Alliance for Medical Image Computing (NAMIC), 
 
     <image>
       <name>outputImage2</name>
-      <longflag>--outputImage2</longflag>
+      <longflag>outputImage2</longflag>
       <description>Output 2</description>
       <label>Bias corrected output image 2</label>
       <channel>output</channel>
@@ -124,7 +124,7 @@ This work is part of the National Alliance for Medical Image Computing (NAMIC), 
 
     <image>
       <name>outputImage3</name>
-      <longflag>--outputImage3</longflag>
+      <longflag>outputImage3</longflag>
       <description>Output 3</description>
       <label>Bias corrected output image 3</label>
       <channel>output</channel>
@@ -140,7 +140,7 @@ This work is part of the National Alliance for Medical Image Computing (NAMIC), 
 
     <image>
       <name>outputImage5</name>
-      <longflag>--outputImage5</longflag>
+      <longflag>outputImage5</longflag>
       <description>Output 5</description>
       <label>Bias corrected output image 5</label>
       <channel>output</channel>
@@ -149,22 +149,58 @@ This work is part of the National Alliance for Medical Image Computing (NAMIC), 
   </parameters>
 <!-- --> 
   <parameters advanced="true">
-    <label>Advanced Segmentation Parameters</label>
-    <description>Advanced parameters for segmentation</description>
+    <label>Advanced Parameters</label>
+    <description>Advanced parameters</description>
+
+    <string-enumeration>
+      <name>FilterMethod</name>
+      <description>PreFiltering method</description>
+      <label>PreFiltering method:</label>
+      <longflag>filterMethod</longflag>
+      <element>Curvature flow</element>
+      <element>Grad aniso diffusion</element>
+      <default>Curvature flow</default>
+    </string-enumeration>
+
+    <integer>
+    <name>FilterIterations</name>
+    <description>Filter iterations (0 = off)</description>
+    <label>PreFiltering iterations (0 = off):</label>
+    <longflag>filterIterations</longflag>
+    <default>1</default>
+    </integer>
+
+    <float>
+    <name>FilterTimeSteps</name>
+    <label>PreFiltering time steps:</label>
+    <description>PreFiltering time steps:</description>
+    <longflag>filterTimeSteps</longflag>
+    <default>0.01</default>
+    </float>
 
     <integer>
     <name>biasDegree</name>
     <flag>b</flag>
-    <longflag>--biasDegree</longflag>
-    <label>Bias Field Polynomial Degree (0 = off)</label>
+    <longflag>biasDegree</longflag>
+    <label>Bias Field Polynomial Degree (0 = off):</label>
     <default>4</default>
     </integer>
 
     <string-enumeration>
+      <name>InitialDistributionEstimator</name>
+      <description>Type of initial distribution estimator</description>
+      <label>Initial distribution estimator:</label>
+      <longflag>initialDistribEstim</longflag>
+      <element>robust</element>
+      <element>standard</element>
+      <default>robust</default>
+    </string-enumeration>
+
+    <string-enumeration>
       <name>atlasMapType</name>
       <description>Type of linear transform for atlas mapping</description>
-      <label>Atlas Transform Type</label>
-      <longflag>--atlasMapType</longflag>
+      <label>Atlas Transform Type:</label>
+      <longflag>atlasMapType</longflag>
       <element>affine</element>
       <element>rigid</element>
       <element>identity</element>
@@ -174,8 +210,8 @@ This work is part of the National Alliance for Medical Image Computing (NAMIC), 
     <string-enumeration>
       <name>coregMapType</name>
       <description>Type of transform to produce</description>
-      <label>Coregistration Transform Type</label>
-      <longflag>--coregMapType</longflag>
+      <label>Coregistration Transform Type:</label>
+      <longflag>coregMapType</longflag>
       <element>affine</element>
       <element>rigid</element>
       <element>identity</element>
@@ -184,16 +220,16 @@ This work is part of the National Alliance for Medical Image Computing (NAMIC), 
 
     <integer>
     <name>atlasFluidIters</name>
-    <label>Atlas Warping Fluid Iterations (0 = off)</label>
-    <longflag>--atlasFluidIters</longflag>
+    <label>Atlas Warping Fluid Iterations (0 = off):</label>
+    <longflag>atlasFluidIters</longflag>
     <default>10</default>
     </integer>
 
     <float>
     <name>atlasFluidMaxStep</name>
-    <label>Atlas Warping Fluid Maximum Step</label>
+    <label>Atlas Warping Fluid Maximum Step:</label>
     <description>Maximum step size for fluid gradient descent</description>
-    <longflag>--atlasFluidMaxStep</longflag>
+    <longflag>atlasFluidMaxStep</longflag>
     <default>0.5</default>
     </float>
 

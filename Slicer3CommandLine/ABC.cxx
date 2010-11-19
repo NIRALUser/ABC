@@ -93,9 +93,9 @@ int run_ABC(int argc, char** argv)
     typedef AtlasRegistrationMethod<float, float> AtlasRegType;
     AtlasRegType::Pointer atlasreg = AtlasRegType::New();
 
-    atlasreg->SetPrefilteringMethod("Curvature flow");
-    atlasreg->SetPrefilteringIterations(1);
-    atlasreg->SetPrefilteringTimeStep(0.01);
+    atlasreg->SetPrefilteringMethod(FilterMethod.c_str());
+    atlasreg->SetPrefilteringIterations(FilterIterations);
+    atlasreg->SetPrefilteringTimeStep(FilterTimeSteps);
 
     //TODO: allow parameter to set output names?
     atlasreg->SetSuffix("");
@@ -156,6 +156,8 @@ int run_ABC(int argc, char** argv)
   for (unsigned int i = 0; i < priorAdjustVec.size(); i++)
     priorweights[i] = priorAdjustVec[i];
   segfilter->SetPriorWeights(priorweights);
+
+  segfilter->SetInitialDistributionEstimator(InitialDistributionEstimator);
 
   segfilter->SetMaxBiasDegree(biasDegree);
 
