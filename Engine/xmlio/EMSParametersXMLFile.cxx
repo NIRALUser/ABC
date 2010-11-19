@@ -121,6 +121,10 @@ EMSParametersXMLFileReader
     double p = atof(m_CurrentString.c_str());
     m_PObject->AppendPriorWeight(p);
   }
+  else if(itksys::SystemTools::Strucmp(name,"INITIAL-DISTRIBUTION-ESTIMATOR") == 0)
+  {
+    m_PObject->SetInitialDistributionEstimator(m_CurrentString);
+  }
   else if(itksys::SystemTools::Strucmp(name,"DO-ATLAS-WARP") == 0)
   {
     unsigned int i = atoi(m_CurrentString.c_str());
@@ -250,6 +254,8 @@ EMSParametersXMLFileWriter
   std::vector<double> prWeights = p->GetPriorWeights();
   for (unsigned int i = 0; i < prWeights.size(); i++)
     WriteField<float>(this, "PRIOR", prWeights[i], output);
+
+  WriteField<std::string>(this, "INITIAL-DISTRIBUTION-ESTIMATOR", p->GetInitialDistributionEstimator(), output);
 
   WriteField<bool>(this, "DO-ATLAS-WARP", p->GetDoAtlasWarp(), output);
 
