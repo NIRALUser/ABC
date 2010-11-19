@@ -73,6 +73,7 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
 
   m_WarpFluidMaxStep = 0.5;
 
+  m_InitialDistributionEstimator = "robust";
 }
 
 template <class TInputImage, class TProbabilityImage>
@@ -1490,7 +1491,10 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
   }
 
   // Compute initial distribution parameters
-  this->ComputeDistributionsRobust();
+  if (m_InitialDistributionEstimator.compare("robust") == 0)
+    this->ComputeDistributionsRobust();
+  else
+    this->ComputeDistributions();
   refMean = m_Means.get_column(0);
 
   // Split distributions with the same prior

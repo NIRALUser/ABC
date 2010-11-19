@@ -143,6 +143,7 @@ runEMS(EMSParameters* emsp, bool debugflag, bool writemoreflag)
   muLogMacro(<< "\n");
   muLogMacro(
     << "Max bias polynomial degree: " << emsp->GetMaxBiasDegree() << "\n");
+  muLogMacro(<< "Initial Distribution Estimator: " << emsp->GetInitialDistributionEstimator() << "\n");
   muLogMacro(<< "Atlas warping: " << emsp->GetDoAtlasWarp() << "\n");
   muLogMacro(
     << "Atlas warp fluid iterations: " << emsp->GetAtlasWarpFluidIterations()
@@ -325,6 +326,8 @@ runEMS(EMSParameters* emsp, bool debugflag, bool writemoreflag)
   segfilter->SetPriorWeights(prWeightsVec);
 
   segfilter->SetMaxBiasDegree(emsp->GetMaxBiasDegree());
+
+  segfilter->SetInitialDistributionEstimator(emsp->GetInitialDistributionEstimator());
 
   if(emsp->GetDoAtlasWarp())
     segfilter->WarpingOn();

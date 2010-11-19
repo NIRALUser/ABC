@@ -82,6 +82,9 @@ public:
   itkGetMacro(ImageLinearMapType, std::string);
   itkSetMacro(ImageLinearMapType, std::string);
 
+  itkGetMacro(InitialDistributionEstimator, std::string);
+  itkSetMacro(InitialDistributionEstimator, std::string);
+
 protected:
 
   EMSParameters();
@@ -115,6 +118,7 @@ protected:
   std::string m_AtlasLinearMapType;
   std::string m_ImageLinearMapType;
 
+  std::string m_InitialDistributionEstimator;
 };
 
 #endif

@@ -26,7 +26,7 @@ EMSParameters
 
   m_MaxBiasDegree = 4;
 
-  m_AtlasWarpFluidIterations = 200;
+  m_AtlasWarpFluidIterations = 10;
 
   m_AtlasWarpFluidMaxStep = 0.5;
 
@@ -34,6 +34,8 @@ EMSParameters
 
   m_AtlasLinearMapType = "affine";
   m_ImageLinearMapType = "affine";
+
+  m_InitialDistributionEstimator = "robust";
 }
 
 EMSParameters
@@ -107,6 +109,7 @@ EMSParameters
   os << "Max bias degree = " << m_MaxBiasDegree << std::endl;
   for (unsigned int i = 0; i < m_PriorWeights.size(); i++)
     os << "Prior " << i+1 << " = " << m_PriorWeights[i] << std::endl;
+  os << "Initial Distribution Estimator = " << m_InitialDistributionEstimator << std::endl;
   if (m_DoAtlasWarp)
   {
     os << "Fluid atlas warping, with:" << std::endl;

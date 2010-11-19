@@ -15,6 +15,8 @@
 #ifndef _EMSegmentationFilter_h
 #define _EMSegmentationFilter_h
 
+#include <string>
+
 #include "itkArray.h"
 #include "itkImage.h"
 #include "itkObject.h"
@@ -151,6 +153,9 @@ public:
   itkGetConstMacro(WarpFluidMaxStep, double);
   itkSetMacro(WarpFluidMaxStep, double);
 
+  itkGetConstMacro(InitialDistributionEstimator, std::string);
+  itkSetMacro(InitialDistributionEstimator, std::string);
+
 protected:
 
   EMSegmentationFilter();
@@ -236,6 +241,7 @@ private:
 
   double m_WarpLikelihoodTolerance;
 
+  std::string m_InitialDistributionEstimator;
 };
 
 #ifndef MU_MANUAL_INSTANTIATION
