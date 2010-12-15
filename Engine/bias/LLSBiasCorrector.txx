@@ -830,7 +830,7 @@ LLSBiasCorrector <TInputImage, TProbabilityImage>
 
     outputMu /= sumP;
 
-    double resRatio = inputMu / outputMu;
+    double resRatio = inputMu / (outputMu + 1e-20);
 
     // Rescale so output mean for ref class stays the same
     for (ind[2] = 0; ind[2] < (long)size[2]; ind[2] += workingofft[2])

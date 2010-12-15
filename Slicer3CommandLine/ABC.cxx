@@ -142,6 +142,18 @@ int run_ABC(int argc, char** argv)
     templateImage = atlasreg->GetAffineTemplate();
   } // end atlas reg block
 
+  // Rescale intensity of input images
+  for (unsigned int k = 0; k < images.GetSize(); k++)
+  {
+    typedef itk::RescaleIntensityImageFilter<FloatImageType, FloatImageType>
+      RescalerType;
+    RescalerType::Pointer resf = RescalerType::New();
+    resf->SetInput(images[k]);
+    resf->SetOutputMinimum(1);
+    resf->SetOutputMaximum(32000);
+    resf->Update();
+    images[k] = resf->GetOutput();
+  }
 
   std:: cout << "Start segmentation..." << std::endl;
   typedef EMSegmentationFilter<FloatImageType, FloatImageType> SegFilterType;
@@ -191,6 +203,7 @@ int run_ABC(int argc, char** argv)
   outputFiles.Append(outputImage2);
   outputFiles.Append(outputImage3);
   outputFiles.Append(outputImage4);
+  outputFiles.Append(outputImage5);
 
   DynArray<FloatImageType::Pointer> corrImages = segfilter->GetCorrected();
 
@@ -203,7 +216,7 @@ int run_ABC(int argc, char** argv)
       RescalerType;
     RescalerType::Pointer resf = RescalerType::New();
     resf->SetInput(corrImages[i]);
-    resf->SetOutputMinimum(0);
+    resf->SetOutputMinimum(1);
     resf->SetOutputMaximum(32000);
     resf->Update();
 
