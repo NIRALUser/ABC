@@ -84,7 +84,7 @@ _hc_linearMapIntensityToHistogramIndex(
 
     unsigned int map = 0;
 
-#if 0
+#if 1
     // Exclude extreme intensities
     if (u < 0.0 || u > 1.0)
       map = numBins+1;

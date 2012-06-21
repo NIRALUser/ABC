@@ -305,8 +305,8 @@ PairRegistrationMethod<TPixel>
   // Define framework
   typedef itk::LinearInterpolateImageFunction<
     ImageType, double> InterpolatorType;
-  //typedef NegativeMIImageMatchMetric<ImageType, ImageType> MetricType;    
-  typedef NegativeHCImageMatchMetric<ImageType, ImageType> MetricType;    
+  typedef NegativeMIImageMatchMetric<ImageType, ImageType> MetricType;    
+  //typedef NegativeHCImageMatchMetric<ImageType, ImageType> MetricType;    
   //typedef itk::MattesMutualInformationImageToImageMetric<
   //  ImageType, ImageType> MetricType;
   
@@ -447,6 +447,7 @@ PairRegistrationMethod<TPixel>
   // Start with amoeba (slow, less prone to local minima)
   muLogMacro(<< "Registering at [4x4x4]...\n");
   metric->SetSampleSpacing(4.0*minSpacing);
+  amoeba->SetMaxIterations(100);
   amoeba->SetCostFunction(metric);
   amoeba->SetInitialPosition(affine->GetParameters());
   amoeba->StartOptimization();
@@ -455,6 +456,7 @@ PairRegistrationMethod<TPixel>
   //anneal->StartOptimization();
 
   muLogMacro(<< "Registering at [2x2x2]...\n");
+  amoeba->SetMaxIterations(50);
   metric->SetSampleSpacing(2.0*minSpacing);
   amoeba->SetInitialPosition(amoeba->GetCurrentPosition());
   amoeba->StartOptimization();
@@ -462,13 +464,18 @@ PairRegistrationMethod<TPixel>
   // Refine results using Powell's method
   muLogMacro(<< "Refining registration at [1x1x1]...\n");
   metric->SetSampleSpacing(1.0*minSpacing);
+
+/*
   powell->SetCostFunction(metric);
   powell->SetInitialPosition(amoeba->GetCurrentPosition());
   powell->StartOptimization();
-
   affine->SetParameters(powell->GetCurrentPosition());
+*/
 
-  //affine->SetParameters(amoeba->GetCurrentPosition());
+  amoeba->SetMaxIterations(10);
+  amoeba->SetInitialPosition(amoeba->GetCurrentPosition());
+  amoeba->StartOptimization();
+  affine->SetParameters(amoeba->GetCurrentPosition());
 
 /*
   // Powell only?

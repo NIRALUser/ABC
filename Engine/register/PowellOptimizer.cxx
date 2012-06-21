@@ -34,7 +34,7 @@ PowellOptimizer
 
   m_FracTol = 1e-5;
 
-  m_BracketMaxIters = 10000000;
+  m_BracketMaxIters = 1000;
   m_BracketMaxStep = 100;
 
   m_BrentMaxIters = 50;
