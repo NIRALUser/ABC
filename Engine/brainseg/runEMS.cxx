@@ -95,6 +95,8 @@ runEMS(EMSParameters* emsp, bool debugflag, bool writemoreflag)
     outext = ".nrrd";
   else if (itksys::SystemTools::Strucmp(fmt.c_str(), "Meta") == 0)
     outext = ".mha";
+  else if (itksys::SystemTools::Strucmp(fmt.c_str(), "Nifti") == 0)
+    outext = ".nii";
   else
   {
     muLogMacro(<< "WARNING: output format unrecognized, using Meta format\n");
