@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <executable>
   <category>
-  @EXTENSION-CATEGORY
+  Segmentation
   </category>
   <title>
   ABC (Atlas Based Classification)
   </title>
   <description><![CDATA[@EXTENSION_DESCRIPTION@]]></description>
-  <version>@EXTENSION_MAJOR_VERSION@.@EXTENSION_MINOR_VERSION@.@EXTENSION_PATCH_VERSION@-@EXTENSION_STATUS@</version>
+  <version>1.4.0</version>
   <contributor>Marcel Prastawa prastawa@sci.utah.edu</contributor>
   <documentation-url>
   http://www.nitrc.org/projects/abc
   </documentation-url>
-  <license>3D Slicer</license>
+  <license>Slicer</license>
   <acknowledgements><![CDATA[@EXTENSION_ACKNOWLEDGEMENTS@]]></acknowledgements>
 <!-- --> 
   <parameters>
