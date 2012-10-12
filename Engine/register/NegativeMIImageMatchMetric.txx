@@ -24,6 +24,9 @@ typename itk::SmartPointer<TIndexImage>
 _linearMapIntensityToHistogramIndex(
   const TImage* img, unsigned int numBins, double sampleSpacing)
 {
+  if (sampleSpacing < 0)
+    itkExceptionMacro(<< "Negative sample spacing");
+
   typename TImage::SizeType size = img->GetLargestPossibleRegion().GetSize();
   typename TImage::SpacingType spacing = img->GetSpacing();
 
@@ -104,6 +107,9 @@ _kMeansMapIntensityToHistogramIndex(
 {
   typedef KMeansQuantizeImageFilter<TImage, TIndexImage>
     QuantizerType;
+
+  if (sampleSpacing < 0)
+    itkExceptionMacro(<< "Negative sample spacing");
 
   typename QuantizerType::Pointer qfilter = QuantizerType::New();
   qfilter->SetInput(img);

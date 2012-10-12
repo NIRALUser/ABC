@@ -391,7 +391,6 @@ PairRegistrationMethod<TPixel>
 
   metric->SetNumberOfBins(200);
 
-/*
   // Not needed for Havrda-Charvat
   metric->SetNormalized(true);
   if (qopt == QuantizeFixed || qopt == QuantizeBoth)
@@ -402,7 +401,6 @@ PairRegistrationMethod<TPixel>
     metric->QuantizeMovingImageOn();
   else
     metric->QuantizeMovingImageOff();
-*/
 
 /*
   // ITK's MI metric
@@ -512,7 +510,7 @@ PairRegistrationMethod<TPixel>
   if (fixedImg == NULL || movingImg == NULL)
     muExceptionMacro(<< "One of input images is NULL");
 
-  AffineTransformType::Pointer affine = RegisterAffine(fixedImg, movingImg);
+  AffineTransformType::Pointer affine = RegisterAffine(fixedImg, movingImg, qopt);
 
   AffineTransformType::ParametersType p = affine->GetParameters();
 
