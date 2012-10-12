@@ -14,8 +14,8 @@
 #include "KMeansQuantizeImageFilter.h"
 #include "MersenneTwisterRNG.h"
 
-#include <float.h>
-#include <math.h>
+#include <cfloat>
+#include <cmath>
 
 
 // Image to histogram index mapping using linear mapping
@@ -25,7 +25,7 @@ _linearMapIntensityToHistogramIndex(
   const TImage* img, unsigned int numBins, double sampleSpacing)
 {
   if (sampleSpacing < 0)
-    itkExceptionMacro(<< "Negative sample spacing");
+    std::cerr << "Negative sample spacing" << std::endl;
 
   typename TImage::SizeType size = img->GetLargestPossibleRegion().GetSize();
   typename TImage::SpacingType spacing = img->GetSpacing();
@@ -109,7 +109,7 @@ _kMeansMapIntensityToHistogramIndex(
     QuantizerType;
 
   if (sampleSpacing < 0)
-    itkExceptionMacro(<< "Negative sample spacing");
+    std::cerr << "Negative sample spacing" << std::endl;
 
   typename QuantizerType::Pointer qfilter = QuantizerType::New();
   qfilter->SetInput(img);
