@@ -27,12 +27,10 @@ ENDIF (Slicer3_FOUND)
 
 INCLUDE_DIRECTORIES(
   ${CMAKE_CURRENT_SOURCE_DIR}
-  ${CMAKE_CURRENT_SOURCE_DIR}/../Engine/aniso
   ${CMAKE_CURRENT_SOURCE_DIR}/../Engine/basicimg
   ${CMAKE_CURRENT_SOURCE_DIR}/../Engine/bias
   ${CMAKE_CURRENT_SOURCE_DIR}/../Engine/brainseg
   ${CMAKE_CURRENT_SOURCE_DIR}/../Engine/common
-  ${CMAKE_CURRENT_SOURCE_DIR}/../Engine/conn
   ${CMAKE_CURRENT_SOURCE_DIR}/../Engine/register
   ${CMAKE_CURRENT_SOURCE_DIR}/../Engine/robust
   ${CMAKE_CURRENT_SOURCE_DIR}/../Engine/spr

@@ -1,22 +1,18 @@
+CMAKE_MINIMUM_REQUIRED(VERSION 2.4)
 
-CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
+if(COMMAND cmake_policy)
+  cmake_policy(SET CMP0003 NEW)
+endif(COMMAND cmake_policy)
 
-PROJECT(ABC_GUI)
+PROJECT(ABC_CLI)
 
-FIND_PACKAGE(ITK)
-IF (ITK_FOUND)
+INCLUDE (${CMAKE_ROOT}/Modules/FindITK.cmake)
+IF (USE_ITK_FILE)
   INCLUDE(${USE_ITK_FILE})
-ELSE (ITK_FOUND)
-  MESSAGE(FATAL_ERROR "ITK not found. Please set ITK_DIR.")
-ENDIF (ITK_FOUND)
-
-FIND_PACKAGE(FLTK REQUIRED NO_MODULE)
-INCLUDE(${FLTK_USE_FILE})
-
-FIND_PACKAGE(OpenGL REQUIRED)
+ENDIF (USE_ITK_FILE)
 
 INCLUDE_DIRECTORIES(
-  ${FLTK_INCLUDE_DIR}
+  ${CMAKE_CURRENT_SOURCE_DIR}
   ${CMAKE_CURRENT_SOURCE_DIR}/../Engine/basicimg
   ${CMAKE_CURRENT_SOURCE_DIR}/../Engine/bias
   ${CMAKE_CURRENT_SOURCE_DIR}/../Engine/brainseg
@@ -27,10 +23,9 @@ INCLUDE_DIRECTORIES(
   ${CMAKE_CURRENT_SOURCE_DIR}/../Engine/xmlio
 )
 
-SET(ABC_GUI_SRCS
-  ../Engine/brainseg/EMSegmentationFilter_float+float.cxx
+SET(ABC_CLI_SRCS
   ../Engine/brainseg/EMSParameters.cxx
-  ../Engine/brainseg/filterFloatImages.cxx
+  ../Engine/brainseg/EMSegmentationFilter_float+float.cxx
   ../Engine/brainseg/runEMS.cxx
   ../Engine/common/Log.cxx
   ../Engine/common/MersenneTwisterRNG.cxx
@@ -47,11 +42,9 @@ SET(ABC_GUI_SRCS
   ../Engine/robust/KruskalMSTClusteringProcess.cxx
   ../Engine/spr/KMeansEstimator.cxx
   ../Engine/xmlio/EMSParametersXMLFile.cxx
-  GUI.cxx
-  main_gui.cxx
+  main_cli.cxx
 )
 
-ADD_EXECUTABLE(ABC_GUI ${ABC_GUI_SRCS})
+ADD_EXECUTABLE(ABC_CLI ${ABC_CLI_SRCS})
 
-TARGET_LINK_LIBRARIES(ABC_GUI ${FLTK_LIBRARIES} ${OPENGL_LIBRARIES} ${ITK_LIBRARIES})
-
+TARGET_LINK_LIBRARIES(ABC_CLI ${ITK_LIBRARIES})

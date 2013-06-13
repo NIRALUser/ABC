@@ -85,6 +85,9 @@ public:
   itkGetMacro(InitialDistributionEstimator, std::string);
   itkSetMacro(InitialDistributionEstimator, std::string);
 
+  itkGetMacro(NumberOfThreads, unsigned int);
+  itkSetMacro(NumberOfThreads, unsigned int);
+
 protected:
 
   EMSParameters();
@@ -119,6 +122,8 @@ protected:
   std::string m_ImageLinearMapType;
 
   std::string m_InitialDistributionEstimator;
+
+  unsigned int m_NumberOfThreads;
 };
 
 #endif

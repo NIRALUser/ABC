@@ -36,6 +36,8 @@ EMSParameters
   m_ImageLinearMapType = "affine";
 
   m_InitialDistributionEstimator = "robust";
+
+  m_NumberOfThreads = 4;
 }
 
 EMSParameters
@@ -89,6 +91,9 @@ EMSParameters
   if (m_Images.GetSize() == 0)
     return false;
 
+  if (m_NumberOfThreads < 1)
+    return false;
+
   return true;
 }
 
@@ -120,4 +125,5 @@ EMSParameters
   {
     os << "No atlas warping..." << std::endl;
   }
+  os << "Number of threads = " << m_NumberOfThreads << std::endl;
 }

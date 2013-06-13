@@ -1,6 +1,6 @@
 
-#include <FL/Fl.h>
-#include <FL/Fl_Window.h>
+#include <FL/Fl.H>
+#include <FL/Fl_Window.H>
 
 #include <string>
 

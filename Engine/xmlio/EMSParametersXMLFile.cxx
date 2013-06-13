@@ -148,6 +148,13 @@ EMSParametersXMLFileReader
   {
     m_PObject->SetImageLinearMapType(m_CurrentString);
   }
+  else if(itksys::SystemTools::Strucmp(name,"NUMBER-OF-THREADS") == 0)
+  {
+    int n = atoi(m_CurrentString.c_str());
+    if (n < 0)
+      itkExceptionMacro(<< "Error: #threads must be >= 1");
+    m_PObject->SetNumberOfThreads(n);
+  }
 }
 
 void
@@ -266,6 +273,8 @@ EMSParametersXMLFileWriter
   WriteField<std::string>(this, "ATLAS-LINEAR-MAP-TYPE", p->GetAtlasLinearMapType(), output);
 
   WriteField<std::string>(this, "IMAGE-LINEAR-MAP-TYPE", p->GetImageLinearMapType(), output);
+
+  WriteField<unsigned int>(this, "NUMBER-OF-THREADS", p->GetNumberOfThreads(), output);
 
   // Finish
   WriteEndElement("SEGMENTATION-PARAMETERS", output);

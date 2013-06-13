@@ -2,7 +2,12 @@
 #ifndef _SimpleGreedyFluidRegistration_txx
 #define _SimpleGreedyFluidRegistration_txx
 
+#include "itkAddImageFilter.h"
+#include "itkMultiplyImageFilter.h"
+#include "itkSubtractImageFilter.h"
+
 #include "itkBSplineInterpolateImageFunction.h"
+#include "itkComposeImageFilter.h"
 #include "itkDerivativeImageFilter.h"
 #include "itkImageDuplicator.h"
 #include "itkImageRegionIteratorWithIndex.h"
@@ -175,6 +180,7 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
 
   DeformationFieldPointer def = resf->GetOutput();
 
+  // Set mapping to identity if it goes out of image boundaries
   typedef itk::ImageRegionIteratorWithIndex<DeformationFieldType> IteratorType;
   IteratorType it(def, def->GetLargestPossibleRegion());
 
@@ -283,19 +289,6 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
         m_MultiScaleSizes[m_NumberOfScales-1],
         m_MultiScaleSpacings[m_NumberOfScales-1]) );
 
-/*
-if (c == 0)
-{
-typedef itk::ImageFileWriter<ImageType> WriterType;
-typename WriterType::Pointer w = WriterType::New();
-w->SetInput(m_OutputImages[c]);
-w->SetFileName("downimg_0.mha");
-w->Update();
-w->SetInput(this->UpsampleImage(m_OutputImages[c], m_MultiScaleSizes[m_NumberOfScales-2], m_MultiScaleSpacings[m_NumberOfScales-2]));
-w->SetFileName("downupimg_0.mha");
-w->Update();
-}
-*/
   }
 
   // Initialize H-field and downsample
@@ -462,6 +455,10 @@ bool
 SimpleGreedyFluidRegistration<TPixel, Dimension>
 ::Step()
 {
+  typedef itk::AddImageFilter<ImageType, ImageType, ImageType> AddFilterType;
+  typedef itk::MultiplyImageFilter<ImageType, ImageType, ImageType> MultiplyFilterType;
+  typedef itk::SubtractImageFilter<ImageType, ImageType, ImageType> SubtractFilterType;
+
   unsigned int numChannels = m_DownFixedImages.GetSize();
 
   // Find scale adjustment
@@ -479,16 +476,33 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
   DisplacementType zerov;
   zerov.Fill(0.0);
 
-  // Compute velocity field
+  // Velocity field
   // v = sum_c { (fixed_c - moving_c) * grad(moving_c) }
-  DeformationFieldPointer velocF = DeformationFieldType::New();
-  //velocF->CopyInformation(m_DownFixedImages[0]);
-  velocF->SetDirection(m_DownFixedImages[0]->GetDirection());
-  velocF->SetOrigin(m_DownFixedImages[0]->GetOrigin());
-  velocF->SetSpacing(m_DownFixedImages[0]->GetSpacing());
-  velocF->SetRegions(m_DownFixedImages[0]->GetLargestPossibleRegion());
-  velocF->Allocate();
-  velocF->FillBuffer(zerov);
+
+  DynArray<ImagePointer> velocImages;
+  for (unsigned int dim = 0; dim < Dimension; dim++)
+  {
+    ImagePointer tmp = ImageType::New();
+    //tmp->CopyInformation(m_DownFixedImages[0]);
+    tmp->SetDirection(m_DownFixedImages[0]->GetDirection());
+    tmp->SetOrigin(m_DownFixedImages[0]->GetOrigin());
+    tmp->SetSpacing(m_DownFixedImages[0]->GetSpacing());
+    tmp->SetRegions(m_DownFixedImages[0]->GetLargestPossibleRegion());
+    tmp->Allocate();
+    tmp->FillBuffer(0);
+    velocImages.Append(tmp);
+  }
+
+  // Difference images
+  DynArray<ImagePointer> diffImages;
+  for (unsigned int ichan = 0; ichan < numChannels; ichan++)
+  {
+    typename SubtractFilterType::Pointer subf = SubtractFilterType::New();
+    subf->SetInput1(m_DownFixedImages[ichan]);
+    subf->SetInput2(m_OutputImages[ichan]);
+    subf->Update();
+    diffImages.Append(subf->GetOutput());
+  }
 
   typedef itk::ImageRegionIteratorWithIndex<DeformationFieldType> IteratorType;
 
@@ -505,25 +519,28 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
       derivf->SetUseImageSpacingOn();
       derivf->Update();
 
-      ImagePointer grad_d = derivf->GetOutput();
+      typename MultiplyFilterType::Pointer mulf = MultiplyFilterType::New();
+      mulf->SetInput1(diffImages[ichan]);
+      mulf->SetInput2(derivf->GetOutput());
+      mulf->Update();
 
-      IteratorType it(velocF, velocF->GetLargestPossibleRegion());
-      for (it.GoToBegin(); !it.IsAtEnd(); ++it)
-      {
-        DisplacementType v = it.Get();
-
-        ImageIndexType ind = it.GetIndex();
-
-        double w =
-          m_DownFixedImages[ichan]->GetPixel(ind) -
-          m_OutputImages[ichan]->GetPixel(ind);
-
-        v[dim] += w * grad_d->GetPixel(ind);
-
-        it.Set(v);
-      }
+      typename AddFilterType::Pointer addf = AddFilterType::New();
+      addf->SetInput1(velocImages[dim]);
+      addf->SetInput2(mulf->GetOutput());
+      addf->Update();
+      velocImages[dim] = addf->GetOutput();
     } // for dim
   } // for ichan
+
+  // Put together accumulated forces into a single vector image
+  typedef itk::ComposeImageFilter<ImageType, DeformationFieldType> VectorComposerType;
+
+  typename VectorComposerType::Pointer vecf = VectorComposerType::New();
+  for (unsigned int dim = 0; dim < Dimension; dim++)
+    vecf->SetInput(dim, velocImages[dim]);
+  vecf->Update();
+  
+  DeformationFieldPointer velocF = vecf->GetOutput();
 
   // Apply Green's kernel to velocity field
   double adjustedWidth = m_KernelWidth * minSpacing;

@@ -3,6 +3,7 @@
 #include "itkImage.h"
 #include "itkImageFileWriter.h"
 #include "itkLinearInterpolateImageFunction.h"
+#include "itkMultiThreader.h"
 #include "itkNumericTraits.h"
 #include "itkRescaleIntensityImageFilter.h"
 #include "itkVersion.h"
@@ -48,6 +49,8 @@ runEMS(EMSParameters* emsp, bool debugflag, bool writemoreflag)
 
   if (!emsp->CheckValues())
     throw std::string("Invalid segmentation parameter values");
+
+  itk::MultiThreader::SetGlobalDefaultNumberOfThreads( emsp->GetNumberOfThreads() );
   
   // Create and start a new timer (for the whole process)
   Timer* timer = new Timer();
@@ -110,6 +113,7 @@ runEMS(EMSParameters* emsp, bool debugflag, bool writemoreflag)
 
   muLogMacro(<< "ABC: Atlas Based Classification\n");
   muLogMacro(<< "========================================\n");
+  muLogMacro(<< "Version 1.5" << "\n");
   muLogMacro(<< "Program compiled on: " << __DATE__ << "\n");
   muLogMacro(<< "\n");
 

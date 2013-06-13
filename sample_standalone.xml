@@ -18,6 +18,8 @@
   <ORIENTATION>file</ORIENTATION>
 </IMAGE>
 
+<NUMBER-OF-THREADS>8</NUMBER-OF-THREADS>
+
 <!-- Filter parameters: Filter method default is "Curvature flow", can be "Grad aniso diffusion" instead -->
 <FILTER-ITERATIONS>10</FILTER-ITERATIONS>
 <FILTER-TIME-STEP>0.01</FILTER-TIME-STEP>
