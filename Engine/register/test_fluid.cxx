@@ -25,24 +25,24 @@ int main(int argc, char** argv)
   int numChannels = (argc - 1) / 2;
 std::cout << numChannels << " channels" << std::endl;
 
-  std::vector<FloatImageType::Pointer> fixedImages;
+  DynArray<FloatImageType::Pointer> fixedImages;
   for (int i = 0; i < numChannels; i++)
   {
     ReaderType::Pointer r = ReaderType::New();
 std::cout << "Fixed: " << argv[1+i] << std::endl;
     r->SetFileName(argv[1+i]);
     r->Update();
-    fixedImages.push_back(r->GetOutput());
+    fixedImages.Append(r->GetOutput());
   }
 
-  std::vector<FloatImageType::Pointer> movingImages;
+  DynArray<FloatImageType::Pointer> movingImages;
   for (int i = 0; i < numChannels; i++)
   {
     ReaderType::Pointer r = ReaderType::New();
 std::cout << "Moving: " << argv[1+numChannels+i] << std::endl;
     r->SetFileName(argv[1+numChannels+i]);
     r->Update();
-    movingImages.push_back(r->GetOutput());
+    movingImages.Append(r->GetOutput());
   }
 
 std::cout << "Start fluid" << std::endl;
@@ -61,12 +61,12 @@ catch (...)
   std::cerr << "Exception in fluid" << std::endl;
 }
 
-  std::vector<FloatImageType::Pointer> outImages = fluid->GetOutputImages();
-std::cout << "out: " << outImages.size() << " images" << std::endl;
+  DynArray<FloatImageType::Pointer> outImages = fluid->GetOutputImages();
+std::cout << "out: " << outImages.GetSize() << " images" << std::endl;
 
   typedef itk::ImageFileWriter<ShortImageType> WriterType;
 
-  for (int i = 0; i < outImages.size(); i++)
+  for (int i = 0; i < outImages.GetSize(); i++)
   {
     std::ostringstream oss;
     oss << "out" << i+1 << ".mha" << std::ends;

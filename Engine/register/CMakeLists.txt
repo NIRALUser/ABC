@@ -64,6 +64,7 @@ ADD_EXECUTABLE(test_chaff
 )
 
 ADD_EXECUTABLE(test_fluid
+  ../common/Log.cxx
   test_fluid.cxx
 )
 

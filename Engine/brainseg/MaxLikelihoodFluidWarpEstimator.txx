@@ -1,10 +1,15 @@
 
-#ifndef _SimpleGreedyFluidRegistration_txx
-#define _SimpleGreedyFluidRegistration_txx
+#ifndef _MaxLikelihoodFluidWarpEstimator_txx
+#define _MaxLikelihoodFluidWarpEstimator_txx
 
 #include "itkAddImageFilter.h"
+#include "itkDivideImageFilter.h"
 #include "itkMultiplyImageFilter.h"
 #include "itkSubtractImageFilter.h"
+#include "itkSquareImageFilter.h"
+
+#include "itkApproximateLogImageFilter.h"
+#include "itkStatisticsImageFilter.h"
 
 #include "itkBSplineInterpolateImageFunction.h"
 #include "itkComposeImageFilter.h"
@@ -25,8 +30,8 @@
 #include "itkImageFileWriter.h"
 
 template <class TPixel, unsigned int Dimension>
-SimpleGreedyFluidRegistration<TPixel, Dimension>
-::SimpleGreedyFluidRegistration()
+MaxLikelihoodFluidWarpEstimator<TPixel, Dimension>
+::MaxLikelihoodFluidWarpEstimator()
 {
   m_Iterations = 10;
   m_MaxStep = 0.5;
@@ -37,32 +42,34 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
 }
 
 template <class TPixel, unsigned int Dimension>
-SimpleGreedyFluidRegistration<TPixel, Dimension>
-::~SimpleGreedyFluidRegistration()
+MaxLikelihoodFluidWarpEstimator<TPixel, Dimension>
+::~MaxLikelihoodFluidWarpEstimator()
 {
 }
 
 template <class TPixel, unsigned int Dimension>
 void
-SimpleGreedyFluidRegistration<TPixel, Dimension>
-::SetFixedImages(const DynArray<ImagePointer>& images)
+MaxLikelihoodFluidWarpEstimator<TPixel, Dimension>
+::SetLikelihoodImages(const DynArray<ImagePointer>& images)
 {
-  m_FixedImages = images;
+  m_LikelihoodImages = images;
+  m_Modified = true;
+
+  this->ScaleLikelihoodImages();
+}
+
+template <class TPixel, unsigned int Dimension>
+void
+MaxLikelihoodFluidWarpEstimator<TPixel, Dimension>
+::SetPriorImages(const DynArray<ImagePointer>& images)
+{
+  m_PriorImages = images;
   m_Modified = true;
 }
 
 template <class TPixel, unsigned int Dimension>
 void
-SimpleGreedyFluidRegistration<TPixel, Dimension>
-::SetMovingImages(const DynArray<ImagePointer>& images)
-{
-  m_MovingImages = images;
-  m_Modified = true;
-}
-
-template <class TPixel, unsigned int Dimension>
-void
-SimpleGreedyFluidRegistration<TPixel, Dimension>
+MaxLikelihoodFluidWarpEstimator<TPixel, Dimension>
 ::SetMask(MaskPointer m)
 {
   m_Mask = m;
@@ -70,8 +77,62 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
 }
 
 template <class TPixel, unsigned int Dimension>
-typename SimpleGreedyFluidRegistration<TPixel, Dimension>::ImagePointer
-SimpleGreedyFluidRegistration<TPixel, Dimension>
+void
+MaxLikelihoodFluidWarpEstimator<TPixel, Dimension>
+::ScaleLikelihoodImages()
+{
+#if 0
+  ImagePointer sumImage = ImageType::New();
+  sumImage->CopyInformation(m_LikelihoodImages[0]);
+  sumImage->SetRegions(m_LikelihoodImages[0]->GetLargestPossibleRegion());
+  sumImage->Allocate();
+  sumImage->FillBuffer(1e-20);
+
+  for (unsigned int c = 0; c < m_LikelihoodImages.GetSize(); c++)
+  {
+    typedef itk::AddImageFilter<ImageType, ImageType, ImageType> AddFilterType;
+    typename AddFilterType::Pointer addf = AddFilterType::New();
+    addf->SetInput1(sumImage);
+    addf->SetInput2(m_LikelihoodImages[c]);
+    addf->Update();
+
+    sumImage = addf->GetOutput();
+  }
+
+  for (unsigned int c = 0; c < m_LikelihoodImages.GetSize(); c++)
+  {
+    typedef itk::DivideImageFilter<ImageType, ImageType, ImageType> DivideFilterType;
+    typename DivideFilterType::Pointer divf = DivideFilterType::New();
+    divf->SetInput1(m_LikelihoodImages[c]);
+    divf->SetInput2(sumImage);
+    divf->Update();
+
+    m_LikelihoodImages[c] = divf->GetOutput();
+  }
+#else
+
+  for (unsigned int c = 0; c < m_LikelihoodImages.GetSize(); c++)
+  {
+    typedef itk::StatisticsImageFilter<ImageType> StatFilterType;
+    typename StatFilterType::Pointer statf = StatFilterType::New();
+    statf->SetInput(m_LikelihoodImages[c]);
+    statf->Update();
+
+    typedef itk::DivideImageFilter<ImageType, ImageType, ImageType> DivideFilterType;
+    typename DivideFilterType::Pointer divf = DivideFilterType::New();
+    divf->SetInput1(m_LikelihoodImages[c]);
+    divf->SetConstant2(statf->GetMaximum());
+    divf->Update();
+
+    m_LikelihoodImages[c] = divf->GetOutput();
+  }
+
+#endif
+}
+
+template <class TPixel, unsigned int Dimension>
+typename MaxLikelihoodFluidWarpEstimator<TPixel, Dimension>::ImagePointer
+MaxLikelihoodFluidWarpEstimator<TPixel, Dimension>
 ::DownsampleImage(ImagePointer img, ImageSizeType downsize, ImageSpacingType downspacing)
 {
   ImageRegionType region = img->GetLargestPossibleRegion();
@@ -108,8 +169,8 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
 }
 
 template <class TPixel, unsigned int Dimension>
-typename SimpleGreedyFluidRegistration<TPixel, Dimension>::ImagePointer
-SimpleGreedyFluidRegistration<TPixel, Dimension>
+typename MaxLikelihoodFluidWarpEstimator<TPixel, Dimension>::ImagePointer
+MaxLikelihoodFluidWarpEstimator<TPixel, Dimension>
 ::UpsampleImage(ImagePointer img, ImageSizeType upsize, ImageSpacingType upspacing)
 {
   typedef itk::BSplineInterpolateImageFunction<ImageType, double, double>
@@ -134,8 +195,8 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
 }
 
 template <class TPixel, unsigned int Dimension>
-typename SimpleGreedyFluidRegistration<TPixel, Dimension>::DeformationFieldPointer
-SimpleGreedyFluidRegistration<TPixel, Dimension>
+typename MaxLikelihoodFluidWarpEstimator<TPixel, Dimension>::DeformationFieldPointer
+MaxLikelihoodFluidWarpEstimator<TPixel, Dimension>
 ::DownsampleDeformation(DeformationFieldPointer img, ImageSizeType downsize, ImageSpacingType downspacing)
 {
   ImageRegionType region = img->GetLargestPossibleRegion();
@@ -160,8 +221,8 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
 }
 
 template <class TPixel, unsigned int Dimension>
-typename SimpleGreedyFluidRegistration<TPixel, Dimension>::DeformationFieldPointer
-SimpleGreedyFluidRegistration<TPixel, Dimension>
+typename MaxLikelihoodFluidWarpEstimator<TPixel, Dimension>::DeformationFieldPointer
+MaxLikelihoodFluidWarpEstimator<TPixel, Dimension>
 ::UpsampleDeformation(DeformationFieldPointer img, ImageSizeType upsize, ImageSpacingType upspacing)
 {
 
@@ -212,8 +273,8 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
 }
 
 template <class TPixel, unsigned int Dimension>
-typename SimpleGreedyFluidRegistration<TPixel, Dimension>::DeformationFieldPointer
-SimpleGreedyFluidRegistration<TPixel, Dimension>
+typename MaxLikelihoodFluidWarpEstimator<TPixel, Dimension>::DeformationFieldPointer
+MaxLikelihoodFluidWarpEstimator<TPixel, Dimension>
 ::UpsampleDisplacement(DeformationFieldPointer img, ImageSizeType upsize, ImageSpacingType upspacing)
 {
 
@@ -235,7 +296,7 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
 
 template <class TPixel, unsigned int Dimension>
 void
-SimpleGreedyFluidRegistration<TPixel, Dimension>
+MaxLikelihoodFluidWarpEstimator<TPixel, Dimension>
 ::Update()
 {
   if (!m_Modified)
@@ -244,13 +305,16 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
   if (m_Iterations < 5)
     itkExceptionMacro(<< "Must have at least 5 iterations");
 
-  if (m_FixedImages.GetSize() != m_MovingImages.GetSize())
-    itkExceptionMacro(<< "Number of channels must match");
+std::cerr << "PP lik " << m_LikelihoodImages.GetSize() << std::endl;
+std::cerr << "PP pr " << m_PriorImages.GetSize() << std::endl;
 
-  unsigned int numChannels = m_FixedImages.GetSize();
+  if (m_LikelihoodImages.GetSize() != m_PriorImages.GetSize())
+    itkExceptionMacro(<< "Number of classes must match");
 
-  ImageSizeType size = m_FixedImages[0]->GetLargestPossibleRegion().GetSize();
-  ImageSpacingType spacing = m_FixedImages[0]->GetSpacing();
+  unsigned int numClasses = m_LikelihoodImages.GetSize();
+
+  ImageSizeType size = m_LikelihoodImages[0]->GetLargestPossibleRegion().GetSize();
+  ImageSpacingType spacing = m_LikelihoodImages[0]->GetSpacing();
 
   m_MultiScaleSizes.Clear();
   m_MultiScaleSpacings.Clear();
@@ -274,18 +338,18 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
   }
 
   // Initialize output images and downsample
-  m_OutputImages.Clear();
-  for (unsigned int c = 0; c < numChannels; c++)
+  m_WarpedPriorImages.Clear();
+  for (unsigned int c = 0; c < numClasses; c++)
   {
 /*
     typedef itk::ImageDuplicator<ImageType> DuperType;
     typename DuperType::Pointer dupef = DuperType::New();
-    dupef->SetInputImage(m_MovingImages[c]);
+    dupef->SetInputImage(m_PriorImages[c]);
     dupef->Update();
-    m_OutputImages.Append(dupef->GetOutput());
+    m_WarpedPriorImages.Append(dupef->GetOutput());
 */
-    m_OutputImages.Append(
-      this->DownsampleImage(m_MovingImages[c],
+    m_WarpedPriorImages.Append(
+      this->DownsampleImage(m_PriorImages[c],
         m_MultiScaleSizes[m_NumberOfScales-1],
         m_MultiScaleSpacings[m_NumberOfScales-1]) );
 
@@ -293,11 +357,11 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
 
   // Initialize H-field and downsample
   m_DeformationField = DeformationFieldType::New();
-  //m_DeformationField->CopyInformation(m_FixedImages[0]);
-  m_DeformationField->SetDirection(m_FixedImages[0]->GetDirection());
-  m_DeformationField->SetOrigin(m_FixedImages[0]->GetOrigin());
-  m_DeformationField->SetSpacing(m_FixedImages[0]->GetSpacing());
-  m_DeformationField->SetRegions(m_FixedImages[0]->GetLargestPossibleRegion());
+  //m_DeformationField->CopyInformation(m_LikelihoodImages[0]);
+  m_DeformationField->SetDirection(m_LikelihoodImages[0]->GetDirection());
+  m_DeformationField->SetOrigin(m_LikelihoodImages[0]->GetOrigin());
+  m_DeformationField->SetSpacing(m_LikelihoodImages[0]->GetSpacing());
+  m_DeformationField->SetRegions(m_LikelihoodImages[0]->GetLargestPossibleRegion());
   m_DeformationField->Allocate();
 
   DisplacementType zerov;
@@ -324,11 +388,11 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
 
   // Store displacement field as well
   m_DisplacementField = DeformationFieldType::New();
-  //m_DisplacementField->CopyInformation(m_FixedImages[0]);
-  m_DisplacementField->SetDirection(m_FixedImages[0]->GetDirection());
-  m_DisplacementField->SetOrigin(m_FixedImages[0]->GetOrigin());
-  m_DisplacementField->SetSpacing(m_FixedImages[0]->GetSpacing());
-  m_DisplacementField->SetRegions(m_FixedImages[0]->GetLargestPossibleRegion());
+  //m_DisplacementField->CopyInformation(m_LikelihoodImages[0]);
+  m_DisplacementField->SetDirection(m_LikelihoodImages[0]->GetDirection());
+  m_DisplacementField->SetOrigin(m_LikelihoodImages[0]->GetOrigin());
+  m_DisplacementField->SetSpacing(m_LikelihoodImages[0]->GetSpacing());
+  m_DisplacementField->SetRegions(m_LikelihoodImages[0]->GetLargestPossibleRegion());
   m_DisplacementField->Allocate();
   m_DisplacementField->FillBuffer(zerov);
   m_DisplacementField =
@@ -362,21 +426,21 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
       m_DeformationField->SetPixel(ind, h);
     }
 
-    m_OutputImages.Clear();
-    for (unsigned int c = 0; c < numChannels; c++)
+    m_WarpedPriorImages.Clear();
+    for (unsigned int c = 0; c < numClasses; c++)
     {
       typedef itk::WarpImageFilter<
         ImageType, ImageType, DeformationFieldType>
         WarperType;
       typename WarperType::Pointer warpf = WarperType::New();
-      warpf->SetInput(m_MovingImages[c]);
+      warpf->SetInput(m_PriorImages[c]);
       warpf->SetEdgePaddingValue(0.0);
       warpf->SetDeformationField(m_DisplacementField);
       warpf->SetOutputDirection(m_DeformationField->GetDirection());
       warpf->SetOutputOrigin(m_DeformationField->GetOrigin());
       warpf->SetOutputSpacing(m_DeformationField->GetSpacing());
       warpf->Update();
-      m_OutputImages.Append(
+      m_WarpedPriorImages.Append(
         this->DownsampleImage(
           warpf->GetOutput(),
           m_MultiScaleSizes[m_NumberOfScales-1],
@@ -391,31 +455,48 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
 
     if (s == 0)
     {
-      m_DownFixedImages = m_FixedImages;
-      m_DownMovingImages = m_MovingImages;
+      m_DownLikelihoodImages = m_LikelihoodImages;
+      m_DownPriorImages = m_PriorImages;
     }
     else
     {
-      m_DownFixedImages.Clear();
-      m_DownMovingImages.Clear();
-      for (unsigned int c = 0; c < numChannels; c++)
+      m_DownLikelihoodImages.Clear();
+      m_DownPriorImages.Clear();
+      for (unsigned int c = 0; c < numClasses; c++)
       {
-        m_DownFixedImages.Append(
-          this->DownsampleImage(m_FixedImages[c], currsize, currspacing) );
-        m_DownMovingImages.Append(
-          this->DownsampleImage(m_MovingImages[c], currsize, currspacing) );
+        m_DownLikelihoodImages.Append(
+          this->DownsampleImage(m_LikelihoodImages[c], currsize, currspacing) );
+        m_DownPriorImages.Append(
+          this->DownsampleImage(m_PriorImages[c], currsize, currspacing) );
       }
     }
 
     if (s < (m_NumberOfScales-1))
     {
-      for (unsigned int c = 0; c < numChannels; c++)
-        m_OutputImages[c] = this->UpsampleImage(
-          m_OutputImages[c], currsize, currspacing); 
       m_DeformationField = this->UpsampleDeformation(
         m_DeformationField, currsize, currspacing);
       m_DisplacementField = this->UpsampleDisplacement(
         m_DisplacementField, currsize, currspacing);
+
+      m_WarpedPriorImages.Clear();
+      for (unsigned int c = 0; c < numClasses; c++)
+      {
+        typedef itk::WarpImageFilter<
+          ImageType, ImageType, DeformationFieldType>
+          WarperType;
+        typename WarperType::Pointer warpf = WarperType::New();
+        warpf->SetInput(m_DownPriorImages[c]);
+        if (c < (numClasses-1))
+          warpf->SetEdgePaddingValue(0.0);
+        else
+          warpf->SetEdgePaddingValue(1.0);
+        warpf->SetDeformationField(m_DisplacementField);
+        warpf->SetOutputDirection(m_DeformationField->GetDirection());
+        warpf->SetOutputOrigin(m_DeformationField->GetOrigin());
+        warpf->SetOutputSpacing(m_DeformationField->GetSpacing());
+        warpf->Update();
+        m_WarpedPriorImages.Append(warpf->GetOutput());
+      }
     }
 
     // Greedy optimization
@@ -430,21 +511,24 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
   }
 
   // Warp images using final deformation
-  m_OutputImages.Clear();
-  for (unsigned int ichan = 0; ichan < numChannels; ichan++)
+  m_WarpedPriorImages.Clear();
+  for (unsigned int c = 0; c < numClasses; c++)
   {
     typedef itk::WarpImageFilter<
       ImageType, ImageType, DeformationFieldType>
       WarperType;
     typename WarperType::Pointer warpf = WarperType::New();
-    warpf->SetInput(m_MovingImages[ichan]);
-    warpf->SetEdgePaddingValue(0.0);
+    warpf->SetInput(m_PriorImages[c]);
+    if (c < (numClasses-1))
+      warpf->SetEdgePaddingValue(0.0);
+    else
+      warpf->SetEdgePaddingValue(1.0);
     warpf->SetDeformationField(m_DisplacementField);
     warpf->SetOutputDirection(m_DeformationField->GetDirection());
     warpf->SetOutputOrigin(m_DeformationField->GetOrigin());
     warpf->SetOutputSpacing(m_DeformationField->GetSpacing());
     warpf->Update();
-    m_OutputImages.Append(warpf->GetOutput());
+    m_WarpedPriorImages.Append(warpf->GetOutput());
   }
 
   m_Modified = false;
@@ -452,29 +536,100 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
 
 template <class TPixel, unsigned int Dimension>
 bool
-SimpleGreedyFluidRegistration<TPixel, Dimension>
+MaxLikelihoodFluidWarpEstimator<TPixel, Dimension>
 ::Step()
 {
   typedef itk::AddImageFilter<ImageType, ImageType, ImageType> AddFilterType;
   typedef itk::MultiplyImageFilter<ImageType, ImageType, ImageType> MultiplyFilterType;
   typedef itk::SubtractImageFilter<ImageType, ImageType, ImageType> SubtractFilterType;
 
-  unsigned int numChannels = m_DownFixedImages.GetSize();
+  unsigned int numClasses = m_DownLikelihoodImages.GetSize();
 
-  // Find scale adjustment
-  ImageSpacingType spacing = m_DownFixedImages[0]->GetSpacing();
-  double minSpacing = spacing[0];
-  for (unsigned int i = 1; i < Dimension; i++)
-    if (spacing[i] < minSpacing)
-      minSpacing = spacing[i];
+  ImageSpacingType spacing = m_DownLikelihoodImages[0]->GetSpacing();
 
-  ImageSizeType size = m_DownFixedImages[0]->GetLargestPossibleRegion().GetSize();
+  ImageSizeType size = m_DownLikelihoodImages[0]->GetLargestPossibleRegion().GetSize();
 
   DisplacementType edgev;
   //edgev.Fill(vnl_huge_val(0.0f));
   edgev.Fill(sqrt(-1.0f));
   DisplacementType zerov;
   zerov.Fill(0.0);
+
+  // Denominator = sum of warped prior * likelihood over class c
+std::cerr << "PP DEBUG denom" << std::endl;
+  ImagePointer sumProdImage = ImageType::New();
+  sumProdImage->CopyInformation(m_WarpedPriorImages[0]);
+  sumProdImage->SetRegions(m_WarpedPriorImages[0]->GetLargestPossibleRegion());
+  sumProdImage->Allocate();
+  sumProdImage->FillBuffer(0);
+
+  for (unsigned int c = 0; c < m_PriorImages.GetSize(); c++)
+  {
+    typename MultiplyFilterType::Pointer mulf = MultiplyFilterType::New();
+    mulf->SetInput1(m_WarpedPriorImages[c]);
+    mulf->SetInput2(m_DownLikelihoodImages[c]);
+    mulf->Update();
+
+    typename AddFilterType::Pointer addf = AddFilterType::New();
+    addf->SetInput1(sumProdImage);
+    addf->SetInput2(mulf->GetOutput());
+    addf->Update();
+  }
+
+  // Compute objective
+/*
+// if (m_DisplayObjective)
+// {
+  typedef itk::ApproximateLogImageFilter<ImageType, ImageType> LogFilterType;
+  typename LogFilterType::Pointer logf = LogFilterType::New();
+  logf->SetInput(sumProdImage);
+  logf->Update();
+
+  typedef itk::StatisticsImageFilter<ImageType> StatFilterType;
+  typename StatFilterType::Pointer statf = StatFilterType::New();
+  statf->SetInput(logf->GetOutput());
+  statf->Update();
+
+  std::cout << "  log likelihood = " << statf->GetSum() << std::endl;
+  //}
+*/
+
+  // Compute derivative of objective
+  ImagePointer derivLogImage;
+  {
+    // Taylor order 2 derivative
+    typename SubtractFilterType::Pointer subf = SubtractFilterType::New();
+    subf->SetConstant1(2.0);
+    subf->SetInput2(sumProdImage);
+    subf->Update();
+
+    derivLogImage = subf->GetOutput();
+
+/*
+    // Taylor order 3 derivative
+    typedef itk::SquareImageFilter<ImageType, ImageType> SquareFilterType;
+    typename SquareFilterType::Pointer sqf = SquareFilterType::New();
+    sqf->SetInput(sumProdImage);
+    sqf->Update();
+
+    typename MultiplyFilterType::Pointer mulf = MultiplyFilterType::New();
+    mulf->SetInput1(sumProdImage);
+    mulf->SetConstant2(3.0);
+    mulf->Update();
+
+    typename SubtractFilterType::Pointer subf = SubtractFilterType::New();
+    subf->SetInput1(sqf->GetOutput());
+    subf->SetInput2(mulf->GetOutput());
+    subf->Update();
+
+    typename AddFilterType::Pointer addf = AddFilterType::New();
+    addf->SetInput1(subf->GetOutput());
+    addf->SetConstant2(3.0);
+    addf->Update();
+
+    derivLogImage = addf->GetOutput();
+*/
+  }
 
   // Velocity field
   // v = sum_c { (fixed_c - moving_c) * grad(moving_c) }
@@ -483,54 +638,47 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
   for (unsigned int dim = 0; dim < Dimension; dim++)
   {
     ImagePointer tmp = ImageType::New();
-    //tmp->CopyInformation(m_DownFixedImages[0]);
-    tmp->SetDirection(m_DownFixedImages[0]->GetDirection());
-    tmp->SetOrigin(m_DownFixedImages[0]->GetOrigin());
-    tmp->SetSpacing(m_DownFixedImages[0]->GetSpacing());
-    tmp->SetRegions(m_DownFixedImages[0]->GetLargestPossibleRegion());
+    //tmp->CopyInformation(m_DownLikelihoodImages[0]);
+    tmp->SetDirection(m_DownLikelihoodImages[0]->GetDirection());
+    tmp->SetOrigin(m_DownLikelihoodImages[0]->GetOrigin());
+    tmp->SetSpacing(m_DownLikelihoodImages[0]->GetSpacing());
+    tmp->SetRegions(m_DownLikelihoodImages[0]->GetLargestPossibleRegion());
     tmp->Allocate();
     tmp->FillBuffer(0);
     velocImages.Append(tmp);
   }
 
-  // Difference images
-  DynArray<ImagePointer> diffImages;
-  for (unsigned int ichan = 0; ichan < numChannels; ichan++)
+std::cerr << "PP DEBUG veloc" << std::endl;
+  for (unsigned int c = 0; c < numClasses; c++)
   {
-    typename SubtractFilterType::Pointer subf = SubtractFilterType::New();
-    subf->SetInput1(m_DownFixedImages[ichan]);
-    subf->SetInput2(m_OutputImages[ichan]);
-    subf->Update();
-    diffImages.Append(subf->GetOutput());
-  }
-
-  typedef itk::ImageRegionIteratorWithIndex<DeformationFieldType> IteratorType;
-
-  for (unsigned int ichan = 0; ichan < numChannels; ichan++)
-  {
-    typedef itk::DerivativeImageFilter<ImageType, ImageType>
-      DerivativeFilterType;
-
     for (unsigned int dim = 0; dim < Dimension; dim++)
     {
-      typename DerivativeFilterType::Pointer derivf = DerivativeFilterType::New();
-      derivf->SetInput(m_OutputImages[ichan]);
-      derivf->SetDirection(dim);
-      derivf->SetUseImageSpacingOn();
-      derivf->Update();
+      typedef itk::DerivativeImageFilter<ImageType, ImageType>
+        DerivativeFilterType;
+      typename DerivativeFilterType::Pointer gradf = DerivativeFilterType::New();
+      gradf->SetInput(m_WarpedPriorImages[c]);
+      gradf->SetDirection(dim);
+      gradf->SetUseImageSpacingOn();
+      gradf->Update();
 
       typename MultiplyFilterType::Pointer mulf = MultiplyFilterType::New();
-      mulf->SetInput1(diffImages[ichan]);
-      mulf->SetInput2(derivf->GetOutput());
+      mulf->SetInput1(m_DownLikelihoodImages[c]);
+      mulf->SetInput2(gradf->GetOutput());
       mulf->Update();
+
+      typename MultiplyFilterType::Pointer mulf2 = MultiplyFilterType::New();
+      mulf2->SetInput1(mulf->GetOutput());
+      mulf2->SetInput2(derivLogImage);
+      mulf2->Update();
 
       typename AddFilterType::Pointer addf = AddFilterType::New();
       addf->SetInput1(velocImages[dim]);
-      addf->SetInput2(mulf->GetOutput());
+      addf->SetInput2(mulf2->GetOutput());
       addf->Update();
+
       velocImages[dim] = addf->GetOutput();
     } // for dim
-  } // for ichan
+  } // for c
 
   // Put together accumulated forces into a single vector image
   typedef itk::ComposeImageFilter<ImageType, DeformationFieldType> VectorComposerType;
@@ -543,21 +691,21 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
   DeformationFieldPointer velocF = vecf->GetOutput();
 
   // Apply Green's kernel to velocity field
-  double adjustedWidth = m_KernelWidth * minSpacing;
-
   typedef VectorBlurImageFilter<DeformationFieldType, DeformationFieldType>
     DeformationSmootherType;
   typename DeformationSmootherType::Pointer defsmoother = DeformationSmootherType::New();
-  defsmoother->SetKernelWidth(adjustedWidth);
+  //defsmoother->SetKernelWidth(adjustedWidth);
+  defsmoother->SetKernelWidth(m_KernelWidth);
   defsmoother->SetInput(velocF);
   defsmoother->Update();
 
   velocF = defsmoother->GetOutput();
 
+  typedef itk::ImageRegionIteratorWithIndex<DeformationFieldType> IteratorType;
   IteratorType it(velocF, velocF->GetLargestPossibleRegion());
 
   // Compute max velocity magnitude
-  double maxVeloc = 0.0;
+  double maxVeloc = 1e-20;
   for (it.GoToBegin(); !it.IsAtEnd(); ++it)
   {
     DisplacementType v = it.Get();
@@ -566,24 +714,22 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
       maxVeloc = d;
   }
 
+std::cout << "PP DEBUG maxVeloc = " << maxVeloc << std::endl;
+
   // Update delta at initial step
   if (m_Delta == 0.0)
-  {
-    m_Delta = m_MaxStep * minSpacing / (maxVeloc + 1e-20);
-  }
+    m_Delta = m_MaxStep / maxVeloc;
 
   // Test for convergence
-  //if ((maxVeloc*m_Delta) < (1e-5*minSpacing))
+  //if ((maxVeloc*m_Delta) < 1e-5)
   //  return true;
 
   double adaptDelta = m_Delta;
-  //if ((maxVeloc*m_Delta) > (m_MaxStep*minSpacing))
-  //  adaptDelta = m_MaxStep * minSpacing / (maxVeloc + 1e-20);
+  if ((maxVeloc*m_Delta) > m_MaxStep)
+    adaptDelta = m_MaxStep / maxVeloc;
 
   for (it.GoToBegin(); !it.IsAtEnd(); ++it)
-  {
     it.Set(it.Get() * adaptDelta);
-  }
 
   // Compose velocity field
   // new h(x) <= h( g(x) ) where g(x) = x + v
@@ -632,21 +778,24 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
   }
 
   // Warp images
-  m_OutputImages.Clear();
-  for (unsigned int ichan = 0; ichan < numChannels; ichan++)
+  m_WarpedPriorImages.Clear();
+  for (unsigned int c = 0; c < numClasses; c++)
   {
     typedef itk::WarpImageFilter<
       ImageType, ImageType, DeformationFieldType>
       WarperType;
     typename WarperType::Pointer warpf = WarperType::New();
-    warpf->SetInput(m_DownMovingImages[ichan]);
-    warpf->SetEdgePaddingValue(0.0);
+    warpf->SetInput(m_DownPriorImages[c]);
+    if (c < (numClasses-1))
+      warpf->SetEdgePaddingValue(0.0);
+    else
+      warpf->SetEdgePaddingValue(1.0);
     warpf->SetDeformationField(m_DisplacementField);
     warpf->SetOutputDirection(m_DeformationField->GetDirection());
     warpf->SetOutputOrigin(m_DeformationField->GetOrigin());
     warpf->SetOutputSpacing(m_DeformationField->GetSpacing());
     warpf->Update();
-    m_OutputImages.Append(warpf->GetOutput());
+    m_WarpedPriorImages.Append(warpf->GetOutput());
   }
 
   return false;

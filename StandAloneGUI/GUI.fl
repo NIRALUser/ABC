@@ -1,26 +1,33 @@
 # data file for the Fltk User Interface Designer (fluid)
-version 1.0109 
+version 1.0302 
 header_name {.h} 
 code_name {.cxx}
-decl {\#include "Fl/Fl_File_Chooser.h"} {} 
-
-decl {\#include "itkExceptionObject.h"} {} 
-
-decl {\#include "EMSParameters.h"} {public
+decl {\#include "FL/Fl_File_Chooser.H"} {private local
 } 
 
-decl {\#include "EMSParametersXMLFile.h"} {public
+decl {\#include "itkExceptionObject.h"} {private local
 } 
 
-decl {\#include "runEMS.h"} {} 
+decl {\#include "EMSParameters.h"} {public local
+} 
 
-decl {\#include <iostream>} {} 
+decl {\#include "EMSParametersXMLFile.h"} {public local
+} 
 
-decl {\#include <sstream>} {} 
+decl {\#include "runEMS.h"} {private local
+} 
 
-decl {\#include <string>} {} 
+decl {\#include <iostream>} {private local
+} 
 
-decl {\#include <stdlib.h>} {} 
+decl {\#include <sstream>} {private local
+} 
+
+decl {\#include <string>} {private local
+} 
+
+decl {\#include <stdlib.h>} {private local
+} 
 
 class GUI {open
 } {
@@ -32,8 +39,7 @@ class GUI {open
     } {
       Fl_Box {} {
         label {
-ABC (Atlas Based Classification) GUI v1.1
-Normal brain segmentation from MRI
+ABC (Atlas Based Classification) GUI v1.5
 
 Marcel Prastawa
 prastawa@@sci.utah.edu
@@ -95,14 +101,14 @@ orientwindow->set_non_modal();}
     }
     Fl_Window mainwindow {
       label ABC open
-      xywh {881 280 600 645} type Double visible
+      xywh {799 283 600 645} type Double visible
     } {
       Fl_Tabs {} {open
         xywh {0 35 620 610} box UP_BOX
       } {
         Fl_Group tab1 {
           label {Step 1} open
-          xywh {10 65 605 575} align 129
+          xywh {10 65 605 575} align 129 hide
         } {
           Fl_Button {} {
             label Next
@@ -227,7 +233,7 @@ atlasdirOutput->value(dir);}
         }
         Fl_Group tab2 {
           label {Step 2} open
-          xywh {10 65 595 575} hide
+          xywh {10 65 605 575}
         } {
           Fl_Browser imageBrowser {
             label {Images:}
@@ -327,6 +333,14 @@ orientwindow->set_modal();}
               label {Grad aniso diffusion}
               xywh {0 0 100 20}
             }
+          }
+          Fl_Input numThreadsInput {
+            label {Number of threads:}
+            xywh {180 515 80 30}
+          }
+          Fl_Box {} {
+            label {Number of threads for image filters}
+            xywh {25 480 580 30} box FLAT_BOX color 175 align 20
           }
         }
         Fl_Group tab3 {
@@ -498,7 +512,7 @@ if (!writeEMSParametersXML(fn, p))
         } {
           MenuItem {} {
             label About
-            callback {aboutwindow->show();} selected
+            callback {aboutwindow->show();}
             xywh {0 0 100 20}
           }
         }
@@ -579,6 +593,7 @@ else
   p->SetFilterMethod("Grad aniso diffusion");
 
 p->SetMaxBiasDegree(atoi(biasDegreeInput->value()));
+p->SetNumberOfThreads(atoi(numThreadsInput->value()));
 
 p->SetDoAtlasWarp(warpAtlasButton->value() != 0);
 
@@ -651,6 +666,13 @@ oss << p->GetMaxBiasDegree() << std::ends;
 biasDegreeInput->value(oss.str().c_str());
 }
 
+{
+std::stringstream oss;
+oss << p->GetNumberOfThreads() << std::ends;
+numThreadsInput->value(oss.str().c_str());
+}
+
+
 warpAtlasButton->value(p->GetDoAtlasWarp());
 
 {
@@ -663,6 +685,7 @@ fluidItersInput->value(oss.str().c_str());
 std::stringstream oss;
 oss << p->GetAtlasWarpFluidMaxStep() << std::ends;
 fluidMaxStepInput->value(oss.str().c_str());
-}} {}
+}} {selected
+    }
   }
 } 

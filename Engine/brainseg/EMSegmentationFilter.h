@@ -133,8 +133,8 @@ public:
   itkGetMacro(FOVMask, ByteImagePointer);
   itkSetMacro(FOVMask, ByteImagePointer);
 
-  itkGetMacro(DoMSTSplit, bool);
-  itkSetMacro(DoMSTSplit, bool);
+  itkGetMacro(DoMSTClustering, bool);
+  itkSetMacro(DoMSTClustering, bool);
 
   itkGetMacro(TemplateImage, InputImagePointer);
   itkSetMacro(TemplateImage, InputImagePointer);
@@ -166,11 +166,11 @@ protected:
   void ComputeMask();
   void ComputePriorLookupTable();
 
-  // Split the initial parameters of classes with the same prior using
+  // Determine the initial parameters of classes with the same prior using
   // MST clustering
-  void SplitPriorMST(unsigned int iprior);
+  void ClusterFromPriorMST(unsigned int iprior);
 
-  void SplitPrior(unsigned int iprior);
+  void ClusterFromPrior(unsigned int iprior);
 
   void ComputeDistributions();
   void ComputeDistributionsRobust(); // Same, but with robust mean
@@ -185,7 +185,11 @@ protected:
 
   void CleanUp();
 
-  void DoWarping();
+  // Returns total log likelihood and normalize the posteriors
+  double NormalizePosteriors();
+
+  void ComputeAtlasWarpingFromProbabilities();
+  void ComputeAtlasWarpingFromIntensities();
 
 private:
 
@@ -193,6 +197,7 @@ private:
   DynArray<InputImagePointer> m_CorrectedImages;
 
   DynArray<ProbabilityImagePointer> m_Priors;
+  DynArray<ProbabilityImagePointer> m_Likelihoods;
   DynArray<ProbabilityImagePointer> m_Posteriors;
 
   ByteImagePointer m_Mask;
@@ -220,7 +225,7 @@ private:
 
   ByteImagePointer m_FOVMask;
 
-  bool m_DoMSTSplit;
+  bool m_DoMSTClustering;
 
   InputImagePointer m_TemplateImage;
   InputImagePointer m_WarpedTemplateImage;

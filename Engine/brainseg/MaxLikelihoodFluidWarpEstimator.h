@@ -2,14 +2,13 @@
 
 /*******************************************************************************
 
-  Simplified greedy fluid warping with L2 norm
-  Can handle multimodal images, assuming the intensities are normalized
+  Simplified greedy fluid warping that maximizes data likelihood
 
 *******************************************************************************/
-// prastawa@sci.utah.edu 1/2010
+// prastawa@sci.utah.edu 7/2013
 
-#ifndef _SimpleGreedyFluidRegistration_h
-#define _SimpleGreedyFluidRegistration_h
+#ifndef _MaxLikelihoodFluidWarpEstimator_h
+#define _MaxLikelihoodFluidWarpEstimator_h
 
 #include "itkImage.h"
 #include "itkVector.h"
@@ -17,13 +16,13 @@
 #include "DynArray.h"
 
 template <class TPixel, unsigned int Dimension>
-class SimpleGreedyFluidRegistration : public itk::Object
+class MaxLikelihoodFluidWarpEstimator : public itk::Object
 {
 
 public:
 
   /** Standard class typedefs. */
-  typedef SimpleGreedyFluidRegistration  Self;
+  typedef MaxLikelihoodFluidWarpEstimator  Self;
   typedef itk::SmartPointer<Self>  Pointer;
   typedef itk::SmartPointer<const Self>  ConstPointer;
 
@@ -45,8 +44,8 @@ public:
   typedef itk::Image<unsigned char, Dimension> MaskType;
   typedef typename MaskType::Pointer MaskPointer;
 
-  void SetFixedImages(const DynArray<ImagePointer>& images);
-  void SetMovingImages(const DynArray<ImagePointer>& images);
+  void SetLikelihoodImages(const DynArray<ImagePointer>& images);
+  void SetPriorImages(const DynArray<ImagePointer>& images);
 
   void SetMask(MaskPointer m);
 
@@ -74,17 +73,19 @@ public:
 */
 
 
-  DynArray<ImagePointer> GetOutputImages()
-  { if (m_Modified) this->Update(); return m_OutputImages; }
+  DynArray<ImagePointer> GetWarpedPriorImages()
+  { if (m_Modified) this->Update(); return m_WarpedPriorImages; }
 
   void Update();
 
 protected:
 
-  SimpleGreedyFluidRegistration();
-  ~SimpleGreedyFluidRegistration();
+  MaxLikelihoodFluidWarpEstimator();
+  ~MaxLikelihoodFluidWarpEstimator();
 
   //DeformationFieldPointer DeformationToDisplacement(DeformationFieldPointer h);
+
+  void ScaleLikelihoodImages();
 
   ImagePointer DownsampleImage(ImagePointer img, ImageSizeType sz, ImageSpacingType sp);
   ImagePointer UpsampleImage(ImagePointer img, ImageSizeType sz, ImageSpacingType sp);
@@ -106,17 +107,19 @@ protected:
 
   double m_Delta;
 
-  DynArray<ImagePointer> m_FixedImages;
-  DynArray<ImagePointer> m_MovingImages;
+  DynArray<ImagePointer> m_LikelihoodImages;
+  DynArray<ImagePointer> m_PriorImages;
 
-  DynArray<ImagePointer> m_DownFixedImages;
-  DynArray<ImagePointer> m_DownMovingImages;
+  DynArray<ImagePointer> m_DownLikelihoodImages;
+  DynArray<ImagePointer> m_DownPriorImages;
 
   MaskPointer m_Mask;
 
-  DynArray<ImagePointer> m_OutputImages;
+  DynArray<ImagePointer> m_WarpedPriorImages;
 
   DeformationFieldPointer m_DeformationField;
+  //DeformationFieldPointer m_InverseDeformationField;
+
   DeformationFieldPointer m_DisplacementField;
 
   DeformationFieldPointer m_InitialDisplacementField;
@@ -130,7 +133,7 @@ protected:
 };
 
 #ifndef MU_MANUAL_INSTANTIATION
-#include "SimpleGreedyFluidRegistration.txx"
+#include "MaxLikelihoodFluidWarpEstimator.txx"
 #endif
 
 #endif
