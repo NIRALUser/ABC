@@ -155,6 +155,7 @@ runEMS(EMSParameters* emsp, bool debugflag, bool writemoreflag)
     << "Atlas warp fluid iterations: " << emsp->GetAtlasWarpFluidIterations()
     << "\n");
   muLogMacro(<< "Atlas warp fluid max step: " << emsp->GetAtlasWarpFluidMaxStep() << "\n");
+  muLogMacro(<< "Atlas warp kernel width: " << emsp->GetAtlasWarpKernelWidth() << "\n");
   muLogMacro(<< "\n");
 
   muLogMacro(<< "=== Start ===\n");
@@ -341,6 +342,7 @@ runEMS(EMSParameters* emsp, bool debugflag, bool writemoreflag)
     segfilter->WarpingOff();
   segfilter->SetWarpFluidIterations(emsp->GetAtlasWarpFluidIterations());
   segfilter->SetWarpFluidMaxStep(emsp->GetAtlasWarpFluidMaxStep());
+  segfilter->SetWarpFluidKernelWidth(emsp->GetAtlasWarpKernelWidth());
   segfilter->Update();
 
   DynArray<std::string> names = emsp->GetImages();
@@ -485,10 +487,10 @@ runEMS(EMSParameters* emsp, bool debugflag, bool writemoreflag)
       std::string("_to_template") + 
       std::string("_dispF_") + std::string(emsp->GetSuffix()) + ".mha";
 
-    typedef itk::ImageFileWriter<SegFilterType::DeformationFieldType>
-      DeformationWriterType;
-    DeformationWriterType::Pointer defwriter = DeformationWriterType::New();
-    defwriter->SetInput(segfilter->GetTemplateFluidDeformation());
+    typedef itk::ImageFileWriter<SegFilterType::VectorFieldType>
+      VectorWriterType;
+    VectorWriterType::Pointer defwriter = VectorWriterType::New();
+    defwriter->SetInput(segfilter->GetTemplateFluidVelocity());
     defwriter->SetFileName(fn.c_str());
     defwriter->Update();
   }

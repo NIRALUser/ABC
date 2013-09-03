@@ -33,6 +33,9 @@ mypow(double x, unsigned int n)
 
 ////////////////////////////////////////////////////////////////////////////////
 
+// TODO: multithreading
+// create coord image, standardize, PowImageFilter
+
 template <class TInputImage, class TProbabilityImage>
 LLSBiasCorrector <TInputImage, TProbabilityImage>
 ::LLSBiasCorrector()
@@ -117,10 +120,10 @@ LLSBiasCorrector <TInputImage, TProbabilityImage>
 template <class TInputImage, class TProbabilityImage>
 void
 LLSBiasCorrector <TInputImage, TProbabilityImage>
-::ComputeDistributions()
+::ComputeLogDistributions()
 {
 
-  itkDebugMacro(<< "LLSBiasCorrector: Computing means and variances...");
+  itkDebugMacro(<< "LLSBiasCorrector: Computing means and variances of log(I)...");
 
   unsigned int numChannels = m_InputImages.GetSize();
   unsigned int numClasses = m_Probabilities.GetSize();
@@ -471,7 +474,9 @@ LLSBiasCorrector <TInputImage, TProbabilityImage>
   InputImageIndexType ind;
 
   // Compute means and variances
-  this->ComputeDistributions();
+//  if (m_Covariances.GetSize() == 0 || m_Covariances.GetSize() != m_Means.columns())
+//    this->ComputeLogDistributions();
+  this->ComputeLogDistributions();
 
   // Compute skips along each dimension
   InputImageSpacingType spacing = m_InputImages[0]->GetSpacing();

@@ -8,8 +8,8 @@
 #include "itkSubtractImageFilter.h"
 #include "itkSquareImageFilter.h"
 
-#include "itkApproximateLogImageFilter.h"
-#include "itkStatisticsImageFilter.h"
+#include "itkTsallisLogImageFilter.h"
+#include "itkTsallisLogDerivativeImageFilter.h"
 
 #include "itkBSplineInterpolateImageFunction.h"
 #include "itkComposeImageFilter.h"
@@ -37,6 +37,7 @@ MaxLikelihoodFluidWarpEstimator<TPixel, Dimension>
   m_MaxStep = 0.5;
   m_Delta = 0.0;
   m_KernelWidth = 1.0;
+  m_RegularityWeight = 1.0;
   m_NumberOfScales = 3;
   m_Modified = false;
 }
@@ -55,7 +56,7 @@ MaxLikelihoodFluidWarpEstimator<TPixel, Dimension>
   m_LikelihoodImages = images;
   m_Modified = true;
 
-  this->ScaleLikelihoodImages();
+  //this->ScaleLikelihoodImages();
 }
 
 template <class TPixel, unsigned int Dimension>
@@ -111,21 +112,42 @@ MaxLikelihoodFluidWarpEstimator<TPixel, Dimension>
   }
 #else
 
+  typedef itk::DivideImageFilter<ImageType, ImageType, ImageType> DivideFilterType;
+
+  double maxMaxL = 1e-20;
+
   for (unsigned int c = 0; c < m_LikelihoodImages.GetSize(); c++)
   {
-    typedef itk::StatisticsImageFilter<ImageType> StatFilterType;
-    typename StatFilterType::Pointer statf = StatFilterType::New();
-    statf->SetInput(m_LikelihoodImages[c]);
-    statf->Update();
+    double maxL = 1e-20;
 
-    typedef itk::DivideImageFilter<ImageType, ImageType, ImageType> DivideFilterType;
+    typedef itk::ImageRegionIteratorWithIndex<ImageType> IteratorType;
+    IteratorType it(m_LikelihoodImages[c], m_LikelihoodImages[c]->GetLargestPossibleRegion());
+    for (it.GoToBegin(); !it.IsAtEnd(); ++it)
+      if (it.Get() > maxL)
+        maxL = it.Get();
+
+    if (maxL > maxMaxL)
+      maxMaxL = maxL;
+
     typename DivideFilterType::Pointer divf = DivideFilterType::New();
     divf->SetInput1(m_LikelihoodImages[c]);
-    divf->SetConstant2(statf->GetMaximum());
+    divf->SetConstant2(maxL);
     divf->Update();
 
     m_LikelihoodImages[c] = divf->GetOutput();
   }
+
+/*
+  for (unsigned int c = 0; c < m_LikelihoodImages.GetSize(); c++)
+  {
+    typename DivideFilterType::Pointer divf = DivideFilterType::New();
+    divf->SetInput1(m_LikelihoodImages[c]);
+    divf->SetConstant2(maxMaxL);
+    divf->Update();
+
+    m_LikelihoodImages[c] = divf->GetOutput();
+  }
+*/
 
 #endif
 }
@@ -195,20 +217,20 @@ MaxLikelihoodFluidWarpEstimator<TPixel, Dimension>
 }
 
 template <class TPixel, unsigned int Dimension>
-typename MaxLikelihoodFluidWarpEstimator<TPixel, Dimension>::DeformationFieldPointer
+typename MaxLikelihoodFluidWarpEstimator<TPixel, Dimension>::VectorFieldPointer
 MaxLikelihoodFluidWarpEstimator<TPixel, Dimension>
-::DownsampleDeformation(DeformationFieldPointer img, ImageSizeType downsize, ImageSpacingType downspacing)
+::DownsampleDisplacement(VectorFieldPointer img, ImageSizeType downsize, ImageSpacingType downspacing)
 {
   ImageRegionType region = img->GetLargestPossibleRegion();
   ImageSizeType size = region.GetSize();
 
   ImageSpacingType spacing = img->GetSpacing();
 
-  typedef itk::VectorResampleImageFilter<DeformationFieldType, DeformationFieldType>
+  typedef itk::VectorResampleImageFilter<VectorFieldType, VectorFieldType>
     ResamplerType;
   typename ResamplerType::Pointer resf = ResamplerType::New();
   resf->SetInput(img);
-  DisplacementType zerov;
+  VectorType zerov;
   zerov.Fill(0.0);
   resf->SetDefaultPixelValue(zerov);
   resf->SetOutputDirection(img->GetDirection());
@@ -221,68 +243,51 @@ MaxLikelihoodFluidWarpEstimator<TPixel, Dimension>
 }
 
 template <class TPixel, unsigned int Dimension>
-typename MaxLikelihoodFluidWarpEstimator<TPixel, Dimension>::DeformationFieldPointer
+typename MaxLikelihoodFluidWarpEstimator<TPixel, Dimension>::VectorFieldPointer
 MaxLikelihoodFluidWarpEstimator<TPixel, Dimension>
-::UpsampleDeformation(DeformationFieldPointer img, ImageSizeType upsize, ImageSpacingType upspacing)
+::ApplyKernel(VectorFieldPointer img)
 {
+  typedef VectorBlurImageFilter<VectorFieldType, VectorFieldType>
+    VectorSmootherType;
+  typename VectorSmootherType::Pointer vsmoothf = VectorSmootherType::New();
+  vsmoothf->SetKernelWidth(m_CurrentKernelWidth);
+  vsmoothf->SetInput(img);
+  vsmoothf->Update();
 
-  typedef itk::VectorResampleImageFilter<DeformationFieldType, DeformationFieldType>
-    ResamplerType;
-  typename ResamplerType::Pointer resf = ResamplerType::New();
-  resf->SetInput(img);
-  DisplacementType zerov;
-  zerov.Fill(sqrt(-1.0f));
-  resf->SetDefaultPixelValue(zerov);
-  resf->SetOutputDirection(img->GetDirection());
-  resf->SetOutputSpacing(upspacing);
-  resf->SetOutputOrigin(img->GetOrigin());
-  resf->SetSize(upsize);
-  resf->Update();
-
-  DeformationFieldPointer def = resf->GetOutput();
-
-  // Set mapping to identity if it goes out of image boundaries
-  typedef itk::ImageRegionIteratorWithIndex<DeformationFieldType> IteratorType;
-  IteratorType it(def, def->GetLargestPossibleRegion());
-
-  for (it.GoToBegin(); !it.IsAtEnd(); ++it)
-  {
-    ImageIndexType ind = it.GetIndex();
-
-    DisplacementType h = def->GetPixel(ind);
-
-    ImagePointType p;
-    def->TransformIndexToPhysicalPoint(ind, p);
-
-    bool isout = false;
-    for (unsigned int dim = 0; dim < Dimension; dim++)
-      if (vnl_math_isnan(h[dim]))
-      {
-        isout = true;
-        break;
-      }
-    if (isout)
-    {
-      for (unsigned int dim = 0; dim < Dimension; dim++)
-        h[dim] = p[dim];
-      def->SetPixel(ind, h);
-    }
-  }
-
-  return def;
+  return vsmoothf->GetOutput();
 }
 
 template <class TPixel, unsigned int Dimension>
-typename MaxLikelihoodFluidWarpEstimator<TPixel, Dimension>::DeformationFieldPointer
+typename MaxLikelihoodFluidWarpEstimator<TPixel, Dimension>::VectorFieldPointer
 MaxLikelihoodFluidWarpEstimator<TPixel, Dimension>
-::UpsampleDisplacement(DeformationFieldPointer img, ImageSizeType upsize, ImageSpacingType upspacing)
+::ApplyKernelFlip(VectorFieldPointer img)
 {
+  typedef VectorBlurImageFilter<VectorFieldType, VectorFieldType>
+    VectorSmootherType;
+  typename VectorSmootherType::Pointer vsmoothf = VectorSmootherType::New();
+  vsmoothf->SetKernelWidth(m_CurrentKernelWidth);
+  vsmoothf->SetInput(img);
+  vsmoothf->Update();
 
-  typedef itk::VectorResampleImageFilter<DeformationFieldType, DeformationFieldType>
+  typedef itk::MultiplyImageFilter<VectorFieldType, ImageType, VectorFieldType> VectorMulFilterType;
+  typename VectorMulFilterType::Pointer vflipf = VectorMulFilterType::New();
+  vflipf->SetInput1(vsmoothf->GetOutput());
+  vflipf->SetConstant2(-1.0);
+  vflipf->Update();
+
+  return vflipf->GetOutput();
+}
+
+template <class TPixel, unsigned int Dimension>
+typename MaxLikelihoodFluidWarpEstimator<TPixel, Dimension>::VectorFieldPointer
+MaxLikelihoodFluidWarpEstimator<TPixel, Dimension>
+::UpsampleDisplacement(VectorFieldPointer img, ImageSizeType upsize, ImageSpacingType upspacing)
+{
+  typedef itk::VectorResampleImageFilter<VectorFieldType, VectorFieldType>
     ResamplerType;
   typename ResamplerType::Pointer resf = ResamplerType::New();
   resf->SetInput(img);
-  DisplacementType zerov;
+  VectorType zerov;
   zerov.Fill(0.0);
   resf->SetDefaultPixelValue(zerov);
   resf->SetOutputDirection(img->GetDirection());
@@ -302,14 +307,13 @@ MaxLikelihoodFluidWarpEstimator<TPixel, Dimension>
   if (!m_Modified)
     return;
 
-  if (m_Iterations < 5)
-    itkExceptionMacro(<< "Must have at least 5 iterations");
-
-std::cerr << "PP lik " << m_LikelihoodImages.GetSize() << std::endl;
-std::cerr << "PP pr " << m_PriorImages.GetSize() << std::endl;
+  if (m_Iterations < 1)
+    itkExceptionMacro(<< "Must have at least 1 iteration");
 
   if (m_LikelihoodImages.GetSize() != m_PriorImages.GetSize())
     itkExceptionMacro(<< "Number of classes must match");
+
+  m_CurrentKernelWidth = m_KernelWidth;
 
   unsigned int numClasses = m_LikelihoodImages.GetSize();
 
@@ -355,90 +359,63 @@ std::cerr << "PP pr " << m_PriorImages.GetSize() << std::endl;
 
   }
 
-  // Initialize H-field and downsample
-  m_DeformationField = DeformationFieldType::New();
-  //m_DeformationField->CopyInformation(m_LikelihoodImages[0]);
-  m_DeformationField->SetDirection(m_LikelihoodImages[0]->GetDirection());
-  m_DeformationField->SetOrigin(m_LikelihoodImages[0]->GetOrigin());
-  m_DeformationField->SetSpacing(m_LikelihoodImages[0]->GetSpacing());
-  m_DeformationField->SetRegions(m_LikelihoodImages[0]->GetLargestPossibleRegion());
-  m_DeformationField->Allocate();
+  // Initialize momenta and velocity
+  m_Momenta = VectorFieldType::New();
+  //m_Momenta->CopyInformation(m_LikelihoodImages[0]);
+  m_Momenta->SetDirection(m_LikelihoodImages[0]->GetDirection());
+  m_Momenta->SetOrigin(m_LikelihoodImages[0]->GetOrigin());
+  m_Momenta->SetSpacing(m_LikelihoodImages[0]->GetSpacing());
+  m_Momenta->SetRegions(m_LikelihoodImages[0]->GetLargestPossibleRegion());
+  m_Momenta->Allocate();
 
-  DisplacementType zerov;
+  m_Velocity = VectorFieldType::New();
+  //m_Velocity->CopyInformation(m_LikelihoodImages[0]);
+  m_Velocity->SetDirection(m_LikelihoodImages[0]->GetDirection());
+  m_Velocity->SetOrigin(m_LikelihoodImages[0]->GetOrigin());
+  m_Velocity->SetSpacing(m_LikelihoodImages[0]->GetSpacing());
+  m_Velocity->SetRegions(m_LikelihoodImages[0]->GetLargestPossibleRegion());
+  m_Velocity->Allocate();
+
+  VectorType zerov;
   zerov.Fill(0.0);
-  m_DeformationField->FillBuffer(zerov);
 
-  typedef itk::ImageRegionIteratorWithIndex<DeformationFieldType> IteratorType;
+  m_Momenta->FillBuffer(zerov);
+  m_Velocity->FillBuffer(zerov);
 
-  IteratorType h0It(m_DeformationField, m_DeformationField->GetLargestPossibleRegion());
-  for (h0It.GoToBegin(); !h0It.IsAtEnd(); ++h0It)
+  if (m_NumberOfScales > 1)
   {
-    ImagePointType p;
-    m_DeformationField->TransformIndexToPhysicalPoint(h0It.GetIndex(), p);
-    DisplacementType v;
-    for (unsigned int i = 0; i < Dimension; i++)
-      v[i] = p[i];
-    h0It.Set(v);
-  }
-  m_DeformationField =
-    this->DownsampleDeformation(
-      m_DeformationField,
-      m_MultiScaleSizes[m_NumberOfScales-1],
-      m_MultiScaleSpacings[m_NumberOfScales-1]);
-
-  // Store displacement field as well
-  m_DisplacementField = DeformationFieldType::New();
-  //m_DisplacementField->CopyInformation(m_LikelihoodImages[0]);
-  m_DisplacementField->SetDirection(m_LikelihoodImages[0]->GetDirection());
-  m_DisplacementField->SetOrigin(m_LikelihoodImages[0]->GetOrigin());
-  m_DisplacementField->SetSpacing(m_LikelihoodImages[0]->GetSpacing());
-  m_DisplacementField->SetRegions(m_LikelihoodImages[0]->GetLargestPossibleRegion());
-  m_DisplacementField->Allocate();
-  m_DisplacementField->FillBuffer(zerov);
-  m_DisplacementField =
-    this->DownsampleDeformation(
-      m_DisplacementField,
-      m_MultiScaleSizes[m_NumberOfScales-1],
-      m_MultiScaleSpacings[m_NumberOfScales-1]);
-
-  // Initialize using user-specified deformation if available
-  if (!m_InitialDisplacementField.IsNull())
-  {
-    m_DisplacementField =
-      this->DownsampleDeformation(
-        m_InitialDisplacementField,
+    m_Momenta =
+      this->DownsampleDisplacement(
+        m_Momenta,
         m_MultiScaleSizes[m_NumberOfScales-1],
         m_MultiScaleSpacings[m_NumberOfScales-1]);
+    m_Velocity =
+      this->DownsampleDisplacement(
+        m_Velocity,
+        m_MultiScaleSizes[m_NumberOfScales-1],
+        m_MultiScaleSpacings[m_NumberOfScales-1]);
+  }
 
-    IteratorType it(m_DeformationField, m_DeformationField->GetLargestPossibleRegion());
-    for (it.GoToBegin(); !it.IsAtEnd(); ++it)
-    {
-      ImageIndexType ind = it.GetIndex();
+  typedef itk::ImageRegionIteratorWithIndex<VectorFieldType> IteratorType;
 
-      ImagePointType p;
-      m_DeformationField->TransformIndexToPhysicalPoint(ind, p);
-
-      DisplacementType v = m_DisplacementField->GetPixel(ind);
-
-      DisplacementType h;
-      for (unsigned int i = 0; i < Dimension; i++)
-        h[i] = p[i] + v[i];
-      m_DeformationField->SetPixel(ind, h);
-    }
+  // Initialize using user-specified velocity if available
+  if (!m_InitialMomenta.IsNull())
+  {
+    m_Velocity = this->ApplyKernelFlip(m_InitialMomenta);
 
     m_WarpedPriorImages.Clear();
     for (unsigned int c = 0; c < numClasses; c++)
     {
       typedef itk::WarpImageFilter<
-        ImageType, ImageType, DeformationFieldType>
+        ImageType, ImageType, VectorFieldType>
         WarperType;
       typename WarperType::Pointer warpf = WarperType::New();
       warpf->SetInput(m_PriorImages[c]);
       warpf->SetEdgePaddingValue(0.0);
-      warpf->SetDeformationField(m_DisplacementField);
-      warpf->SetOutputDirection(m_DeformationField->GetDirection());
-      warpf->SetOutputOrigin(m_DeformationField->GetOrigin());
-      warpf->SetOutputSpacing(m_DeformationField->GetSpacing());
+      warpf->SetDisplacementField(m_Velocity);
+      warpf->SetOutputDirection(m_Velocity->GetDirection());
+      warpf->SetOutputOrigin(m_Velocity->GetOrigin());
+      warpf->SetOutputSpacing(m_Velocity->GetSpacing());
       warpf->Update();
       m_WarpedPriorImages.Append(
         this->DownsampleImage(
@@ -446,7 +423,19 @@ std::cerr << "PP pr " << m_PriorImages.GetSize() << std::endl;
           m_MultiScaleSizes[m_NumberOfScales-1],
           m_MultiScaleSpacings[m_NumberOfScales-1]) );
     }
-  } // if h init exist
+
+    m_Momenta =
+      this->DownsampleDisplacement(
+        m_InitialMomenta,
+        m_MultiScaleSizes[m_NumberOfScales-1],
+        m_MultiScaleSpacings[m_NumberOfScales-1]);
+
+    m_Velocity =
+      this->DownsampleDisplacement(
+        m_Velocity,
+        m_MultiScaleSizes[m_NumberOfScales-1],
+        m_MultiScaleSpacings[m_NumberOfScales-1]);
+  } // if v init exist
 
   for (long s = (m_NumberOfScales-1); s >= 0; s--)
   {
@@ -473,16 +462,14 @@ std::cerr << "PP pr " << m_PriorImages.GetSize() << std::endl;
 
     if (s < (m_NumberOfScales-1))
     {
-      m_DeformationField = this->UpsampleDeformation(
-        m_DeformationField, currsize, currspacing);
-      m_DisplacementField = this->UpsampleDisplacement(
-        m_DisplacementField, currsize, currspacing);
+      m_Momenta = this->UpsampleDisplacement(m_Momenta, currsize, currspacing);
+      m_Velocity = this->ApplyKernelFlip(m_Momenta);
 
       m_WarpedPriorImages.Clear();
       for (unsigned int c = 0; c < numClasses; c++)
       {
         typedef itk::WarpImageFilter<
-          ImageType, ImageType, DeformationFieldType>
+          ImageType, ImageType, VectorFieldType>
           WarperType;
         typename WarperType::Pointer warpf = WarperType::New();
         warpf->SetInput(m_DownPriorImages[c]);
@@ -490,24 +477,72 @@ std::cerr << "PP pr " << m_PriorImages.GetSize() << std::endl;
           warpf->SetEdgePaddingValue(0.0);
         else
           warpf->SetEdgePaddingValue(1.0);
-        warpf->SetDeformationField(m_DisplacementField);
-        warpf->SetOutputDirection(m_DeformationField->GetDirection());
-        warpf->SetOutputOrigin(m_DeformationField->GetOrigin());
-        warpf->SetOutputSpacing(m_DeformationField->GetSpacing());
+        warpf->SetDisplacementField(m_Velocity);
+        warpf->SetOutputDirection(m_Velocity->GetDirection());
+        warpf->SetOutputOrigin(m_Velocity->GetOrigin());
+        warpf->SetOutputSpacing(m_Velocity->GetSpacing());
         warpf->Update();
         m_WarpedPriorImages.Append(warpf->GetOutput());
       }
     }
 
-    // Greedy optimization
+std::cout << "  fluid optimization with kernel width = " << m_CurrentKernelWidth << std::endl;
+
+    // Gradient descent
+    double objf = this->ComputeObjective(m_Momenta);
+
+    double ref_objf = objf;
+
     m_Delta = 0.0;
+
     for (unsigned int iter = 1; iter <= m_Iterations; iter++)
     {
-      bool converge = this->Step();
-      if (converge)
+      double prev_objf = objf;
+
+      this->ComputeGradient();
+
+      double objf_test = objf;
+
+      // Line search
+      unsigned int iline;
+      for (iline = 1; iline <= 50; iline++)
+      {
+        typedef itk::MultiplyImageFilter<VectorFieldType, ImageType, VectorFieldType> VectorMulFilterType;
+        typename VectorMulFilterType::Pointer vscalf = VectorMulFilterType::New();
+        vscalf->SetInput1(m_GradientMomenta);
+        vscalf->SetConstant2(m_Delta);
+        vscalf->Update();
+
+        typedef itk::SubtractImageFilter<VectorFieldType, VectorFieldType, VectorFieldType> VectorSubFilterType;
+        typename VectorSubFilterType::Pointer vsubf = VectorSubFilterType::New();
+        vsubf->SetInput1(m_Momenta);
+        vsubf->SetInput2(vscalf->GetOutput());
+        vsubf->Update();
+
+        VectorFieldPointer Atest = vsubf->GetOutput();
+
+        objf_test = this->ComputeObjective(Atest);
+
+        if (objf_test < objf)
+        {
+          m_Momenta = Atest;
+          m_Velocity = this->ApplyKernelFlip(Atest);
+          objf = objf_test;
+          m_Delta *= 1.2;
+          break;
+        }
+
+        m_Delta *= 0.5;
+      }
+      
+      if (iline > 50)
+        break;
+
+      if (fabs(prev_objf - objf) < 1e-4*fabs(ref_objf - objf))
         break;
     }
 
+    m_CurrentKernelWidth *= 0.5;
   }
 
   // Warp images using final deformation
@@ -515,7 +550,7 @@ std::cerr << "PP pr " << m_PriorImages.GetSize() << std::endl;
   for (unsigned int c = 0; c < numClasses; c++)
   {
     typedef itk::WarpImageFilter<
-      ImageType, ImageType, DeformationFieldType>
+      ImageType, ImageType, VectorFieldType>
       WarperType;
     typename WarperType::Pointer warpf = WarperType::New();
     warpf->SetInput(m_PriorImages[c]);
@@ -523,10 +558,10 @@ std::cerr << "PP pr " << m_PriorImages.GetSize() << std::endl;
       warpf->SetEdgePaddingValue(0.0);
     else
       warpf->SetEdgePaddingValue(1.0);
-    warpf->SetDeformationField(m_DisplacementField);
-    warpf->SetOutputDirection(m_DeformationField->GetDirection());
-    warpf->SetOutputOrigin(m_DeformationField->GetOrigin());
-    warpf->SetOutputSpacing(m_DeformationField->GetSpacing());
+    warpf->SetDisplacementField(m_Velocity);
+    warpf->SetOutputDirection(m_Velocity->GetDirection());
+    warpf->SetOutputOrigin(m_Velocity->GetOrigin());
+    warpf->SetOutputSpacing(m_Velocity->GetSpacing());
     warpf->Update();
     m_WarpedPriorImages.Append(warpf->GetOutput());
   }
@@ -535,11 +570,97 @@ std::cerr << "PP pr " << m_PriorImages.GetSize() << std::endl;
 }
 
 template <class TPixel, unsigned int Dimension>
-bool
+double
 MaxLikelihoodFluidWarpEstimator<TPixel, Dimension>
-::Step()
+::ComputeObjective(VectorFieldPointer A)
 {
   typedef itk::AddImageFilter<ImageType, ImageType, ImageType> AddFilterType;
+  typedef itk::MultiplyImageFilter<ImageType, ImageType, ImageType> MultiplyFilterType;
+
+  unsigned int numClasses = m_DownLikelihoodImages.GetSize();
+
+  // Apply momenta
+  VectorFieldPointer V = this->ApplyKernelFlip(A);
+
+  DynArray<ImagePointer> warpedPriorImages;
+  for (unsigned int c = 0; c < numClasses; c++)
+  {
+    typedef itk::WarpImageFilter<ImageType, ImageType, VectorFieldType> WarperType;
+    typename WarperType::Pointer warpf = WarperType::New();
+    warpf->SetInput(m_DownPriorImages[c]);
+    if (c < (numClasses-1))
+      warpf->SetEdgePaddingValue(0.0);
+    else
+      warpf->SetEdgePaddingValue(1.0);
+    warpf->SetDisplacementField(V);
+    warpf->SetOutputDirection(V->GetDirection());
+    warpf->SetOutputOrigin(V->GetOrigin());
+    warpf->SetOutputSpacing(V->GetSpacing());
+    warpf->Update();
+    warpedPriorImages.Append(warpf->GetOutput());
+  }
+
+  // Denominator = sum of warped prior * likelihood over class c
+  ImagePointer sumProdImage = ImageType::New();
+  sumProdImage->CopyInformation(m_DownPriorImages[0]);
+  sumProdImage->SetRegions(m_DownPriorImages[0]->GetLargestPossibleRegion());
+  sumProdImage->Allocate();
+  sumProdImage->FillBuffer(0);
+
+  //for (unsigned int c = 0; c < m_PriorImages.GetSize(); c++)
+  for (unsigned int c = 0; c < (m_PriorImages.GetSize()-1); c++)
+  {
+    typename MultiplyFilterType::Pointer mulf = MultiplyFilterType::New();
+    mulf->SetInput1(warpedPriorImages[c]);
+    mulf->SetInput2(m_DownLikelihoodImages[c]);
+    mulf->Update();
+
+    typename AddFilterType::Pointer addf = AddFilterType::New();
+    addf->SetInput1(sumProdImage);
+    addf->SetInput2(mulf->GetOutput());
+    addf->Update();
+
+    sumProdImage = addf->GetOutput();
+  }
+
+  typedef itk::TsallisLogImageFilter<ImageType, ImageType> LogFilterType;
+  typename LogFilterType::Pointer logf = LogFilterType::New();
+  logf->SetInput(sumProdImage);
+  logf->Update();
+
+  double objf = 0;
+
+  typedef itk::ImageRegionIteratorWithIndex<ImageType> IteratorType;
+  IteratorType it(logf->GetOutput(), sumProdImage->GetLargestPossibleRegion());
+  for (it.GoToBegin(); !it.IsAtEnd(); ++it)
+    objf -= it.Get();
+
+  if (m_RegularityWeight > 0.0)
+  {
+    double VdotA = 0; // Sobolev
+    typedef itk::ImageRegionIteratorWithIndex<VectorFieldType> VectorIteratorType;
+    VectorIteratorType vIt(V, V->GetLargestPossibleRegion());
+    for (vIt.GoToBegin(); !vIt.IsAtEnd(); ++vIt)
+    {
+      VectorType vvec = vIt.Get();
+      VectorType avec = A->GetPixel(vIt.GetIndex());
+      for (unsigned int d = 0; d < Dimension; d++)
+        VdotA += vvec[d] * avec[d];
+    }
+
+    objf += m_RegularityWeight * VdotA;
+  }
+
+  return objf;
+}
+
+template <class TPixel, unsigned int Dimension>
+void
+MaxLikelihoodFluidWarpEstimator<TPixel, Dimension>
+::ComputeGradient()
+{
+  typedef itk::AddImageFilter<ImageType, ImageType, ImageType> AddFilterType;
+  typedef itk::DivideImageFilter<ImageType, ImageType, ImageType> DivideFilterType;
   typedef itk::MultiplyImageFilter<ImageType, ImageType, ImageType> MultiplyFilterType;
   typedef itk::SubtractImageFilter<ImageType, ImageType, ImageType> SubtractFilterType;
 
@@ -549,21 +670,44 @@ MaxLikelihoodFluidWarpEstimator<TPixel, Dimension>
 
   ImageSizeType size = m_DownLikelihoodImages[0]->GetLargestPossibleRegion().GetSize();
 
-  DisplacementType edgev;
+  m_Velocity = this->ApplyKernelFlip(m_Momenta);
+
+  VectorType edgev;
   //edgev.Fill(vnl_huge_val(0.0f));
   edgev.Fill(sqrt(-1.0f));
-  DisplacementType zerov;
+  VectorType zerov;
   zerov.Fill(0.0);
 
+  m_WarpedPriorImages.Clear();
+  for (unsigned int c = 0; c < numClasses; c++)
+  {
+    typedef itk::WarpImageFilter<
+      ImageType, ImageType, VectorFieldType>
+      WarperType;
+    typename WarperType::Pointer warpf = WarperType::New();
+    warpf->SetInput(m_DownPriorImages[c]);
+    if (c < (numClasses-1))
+      warpf->SetEdgePaddingValue(0.0);
+    else
+      warpf->SetEdgePaddingValue(1.0);
+    warpf->SetDisplacementField(m_Velocity);
+    warpf->SetOutputDirection(m_Velocity->GetDirection());
+    warpf->SetOutputOrigin(m_Velocity->GetOrigin());
+    warpf->SetOutputSpacing(m_Velocity->GetSpacing());
+    warpf->Update();
+    m_WarpedPriorImages.Append(warpf->GetOutput());
+  }
+
   // Denominator = sum of warped prior * likelihood over class c
-std::cerr << "PP DEBUG denom" << std::endl;
   ImagePointer sumProdImage = ImageType::New();
   sumProdImage->CopyInformation(m_WarpedPriorImages[0]);
   sumProdImage->SetRegions(m_WarpedPriorImages[0]->GetLargestPossibleRegion());
   sumProdImage->Allocate();
+  //sumProdImage->FillBuffer(1e-20);
   sumProdImage->FillBuffer(0);
 
-  for (unsigned int c = 0; c < m_PriorImages.GetSize(); c++)
+  //for (unsigned int c = 0; c < m_PriorImages.GetSize(); c++)
+  for (unsigned int c = 0; c < (m_PriorImages.GetSize()-1); c++)
   {
     typename MultiplyFilterType::Pointer mulf = MultiplyFilterType::New();
     mulf->SetInput1(m_WarpedPriorImages[c]);
@@ -574,67 +718,19 @@ std::cerr << "PP DEBUG denom" << std::endl;
     addf->SetInput1(sumProdImage);
     addf->SetInput2(mulf->GetOutput());
     addf->Update();
+
+    sumProdImage = addf->GetOutput();
   }
 
-  // Compute objective
-/*
-// if (m_DisplayObjective)
-// {
-  typedef itk::ApproximateLogImageFilter<ImageType, ImageType> LogFilterType;
-  typename LogFilterType::Pointer logf = LogFilterType::New();
-  logf->SetInput(sumProdImage);
-  logf->Update();
+  // log derivative
+  typedef itk::TsallisLogDerivativeImageFilter<ImageType, ImageType> LogDerivType;
+  typename LogDerivType::Pointer dlogf = LogDerivType::New();
+  dlogf->SetInput(sumProdImage);
+  dlogf->Update();
+  ImagePointer derivLogImage = dlogf->GetOutput();
 
-  typedef itk::StatisticsImageFilter<ImageType> StatFilterType;
-  typename StatFilterType::Pointer statf = StatFilterType::New();
-  statf->SetInput(logf->GetOutput());
-  statf->Update();
-
-  std::cout << "  log likelihood = " << statf->GetSum() << std::endl;
-  //}
-*/
-
-  // Compute derivative of objective
-  ImagePointer derivLogImage;
-  {
-    // Taylor order 2 derivative
-    typename SubtractFilterType::Pointer subf = SubtractFilterType::New();
-    subf->SetConstant1(2.0);
-    subf->SetInput2(sumProdImage);
-    subf->Update();
-
-    derivLogImage = subf->GetOutput();
-
-/*
-    // Taylor order 3 derivative
-    typedef itk::SquareImageFilter<ImageType, ImageType> SquareFilterType;
-    typename SquareFilterType::Pointer sqf = SquareFilterType::New();
-    sqf->SetInput(sumProdImage);
-    sqf->Update();
-
-    typename MultiplyFilterType::Pointer mulf = MultiplyFilterType::New();
-    mulf->SetInput1(sumProdImage);
-    mulf->SetConstant2(3.0);
-    mulf->Update();
-
-    typename SubtractFilterType::Pointer subf = SubtractFilterType::New();
-    subf->SetInput1(sqf->GetOutput());
-    subf->SetInput2(mulf->GetOutput());
-    subf->Update();
-
-    typename AddFilterType::Pointer addf = AddFilterType::New();
-    addf->SetInput1(subf->GetOutput());
-    addf->SetConstant2(3.0);
-    addf->Update();
-
-    derivLogImage = addf->GetOutput();
-*/
-  }
-
-  // Velocity field
-  // v = sum_c { (fixed_c - moving_c) * grad(moving_c) }
-
-  DynArray<ImagePointer> velocImages;
+  // Functional gradient of velocity 
+  DynArray<ImagePointer> gradImages;
   for (unsigned int dim = 0; dim < Dimension; dim++)
   {
     ImagePointer tmp = ImageType::New();
@@ -645,11 +741,11 @@ std::cerr << "PP DEBUG denom" << std::endl;
     tmp->SetRegions(m_DownLikelihoodImages[0]->GetLargestPossibleRegion());
     tmp->Allocate();
     tmp->FillBuffer(0);
-    velocImages.Append(tmp);
+    gradImages.Append(tmp);
   }
 
-std::cerr << "PP DEBUG veloc" << std::endl;
-  for (unsigned int c = 0; c < numClasses; c++)
+  //for (unsigned int c = 0; c < numClasses; c++)
+  for (unsigned int c = 0; c < (numClasses-1); c++)
   {
     for (unsigned int dim = 0; dim < Dimension; dim++)
     {
@@ -671,134 +767,64 @@ std::cerr << "PP DEBUG veloc" << std::endl;
       mulf2->SetInput2(derivLogImage);
       mulf2->Update();
 
+/*
+      typename SubtractFilterType::Pointer subf = SubtractFilterType::New();
+      subf->SetInput1(gradImages[dim]);
+      subf->SetInput2(mulf2->GetOutput());
+      subf->Update();
+
+      gradImages[dim] = subf->GetOutput();
+*/
       typename AddFilterType::Pointer addf = AddFilterType::New();
-      addf->SetInput1(velocImages[dim]);
+      addf->SetInput1(gradImages[dim]);
       addf->SetInput2(mulf2->GetOutput());
       addf->Update();
 
-      velocImages[dim] = addf->GetOutput();
+      gradImages[dim] = addf->GetOutput();
     } // for dim
   } // for c
 
   // Put together accumulated forces into a single vector image
-  typedef itk::ComposeImageFilter<ImageType, DeformationFieldType> VectorComposerType;
+  typedef itk::ComposeImageFilter<ImageType, VectorFieldType> VectorComposerType;
 
   typename VectorComposerType::Pointer vecf = VectorComposerType::New();
   for (unsigned int dim = 0; dim < Dimension; dim++)
-    vecf->SetInput(dim, velocImages[dim]);
+    vecf->SetInput(dim, gradImages[dim]);
   vecf->Update();
-  
-  DeformationFieldPointer velocF = vecf->GetOutput();
 
-  // Apply Green's kernel to velocity field
-  typedef VectorBlurImageFilter<DeformationFieldType, DeformationFieldType>
-    DeformationSmootherType;
-  typename DeformationSmootherType::Pointer defsmoother = DeformationSmootherType::New();
-  //defsmoother->SetKernelWidth(adjustedWidth);
-  defsmoother->SetKernelWidth(m_KernelWidth);
-  defsmoother->SetInput(velocF);
-  defsmoother->Update();
+  typedef itk::MultiplyImageFilter<VectorFieldType, ImageType, VectorFieldType> VectorMulFilterType;
+  typename VectorMulFilterType::Pointer vscalf = VectorMulFilterType::New();
+  vscalf->SetInput1(m_Momenta);
+  vscalf->SetConstant2(m_RegularityWeight * 2.0);
+  vscalf->Update();
 
-  velocF = defsmoother->GetOutput();
+  typedef itk::AddImageFilter<VectorFieldType, VectorFieldType, VectorFieldType> VectorAddFilterType;
+  typename VectorAddFilterType::Pointer vaddf = VectorAddFilterType::New();
+  vaddf->SetInput1(vecf->GetOutput());
+  vaddf->SetInput2(vscalf->GetOutput());
+  vaddf->Update();
 
-  typedef itk::ImageRegionIteratorWithIndex<DeformationFieldType> IteratorType;
-  IteratorType it(velocF, velocF->GetLargestPossibleRegion());
-
-  // Compute max velocity magnitude
-  double maxVeloc = 1e-20;
-  for (it.GoToBegin(); !it.IsAtEnd(); ++it)
-  {
-    DisplacementType v = it.Get();
-    double d = v.GetNorm();
-    if (d > maxVeloc)
-      maxVeloc = d;
-  }
-
-std::cout << "PP DEBUG maxVeloc = " << maxVeloc << std::endl;
+  m_GradientMomenta = this->ApplyKernel(vaddf->GetOutput());
 
   // Update delta at initial step
   if (m_Delta == 0.0)
-    m_Delta = m_MaxStep / maxVeloc;
-
-  // Test for convergence
-  //if ((maxVeloc*m_Delta) < 1e-5)
-  //  return true;
-
-  double adaptDelta = m_Delta;
-  if ((maxVeloc*m_Delta) > m_MaxStep)
-    adaptDelta = m_MaxStep / maxVeloc;
-
-  for (it.GoToBegin(); !it.IsAtEnd(); ++it)
-    it.Set(it.Get() * adaptDelta);
-
-  // Compose velocity field
-  // new h(x) <= h( g(x) ) where g(x) = x + v
-  typedef itk::WarpVectorImageFilter<
-    DeformationFieldType, DeformationFieldType, DeformationFieldType>
-    ComposerType;
-  typename ComposerType::Pointer compf = ComposerType::New();
-  compf->SetInput(m_DeformationField);
-  compf->SetDeformationField(velocF);
-  compf->SetEdgePaddingValue(edgev);
-  compf->SetOutputDirection(m_DeformationField->GetDirection());
-  compf->SetOutputOrigin(m_DeformationField->GetOrigin());
-  compf->SetOutputSpacing(m_DeformationField->GetSpacing());
-  compf->Update();
-
-  m_DeformationField = compf->GetOutput();
-
-  for (it.GoToBegin(); !it.IsAtEnd(); ++it)
   {
-    ImageIndexType ind = it.GetIndex();
+    // Compute max gradient magnitude
+    typedef itk::ImageRegionIteratorWithIndex<VectorFieldType> IteratorType;
+    IteratorType it(m_GradientMomenta, m_GradientMomenta->GetLargestPossibleRegion());
 
-    DisplacementType h = m_DeformationField->GetPixel(ind);
-
-    ImagePointType p;
-    m_DeformationField->TransformIndexToPhysicalPoint(ind, p);
-
-    bool isout = false;
-    for (unsigned int dim = 0; dim < Dimension; dim++)
-      //if (vnl_math_isinf(h[dim]))
-      if (vnl_math_isnan(h[dim]))
-      {
-        isout = true;
-        break;
-      }
-    if (isout)
+    double maxGrad = 1e-20;
+    for (it.GoToBegin(); !it.IsAtEnd(); ++it)
     {
-      for (unsigned int dim = 0; dim < Dimension; dim++)
-        h[dim] = p[dim];
-      m_DeformationField->SetPixel(ind, h);
+      VectorType v = it.Get();
+      double d = v.GetNorm();
+      if (d > maxGrad)
+        maxGrad = d;
     }
 
-    DisplacementType u;
-    for (unsigned int i = 0; i < Dimension; i++)
-      u[i] = p[i];
-    m_DisplacementField->SetPixel(ind, h - u);
+    m_Delta = m_MaxStep / maxGrad;
   }
 
-  // Warp images
-  m_WarpedPriorImages.Clear();
-  for (unsigned int c = 0; c < numClasses; c++)
-  {
-    typedef itk::WarpImageFilter<
-      ImageType, ImageType, DeformationFieldType>
-      WarperType;
-    typename WarperType::Pointer warpf = WarperType::New();
-    warpf->SetInput(m_DownPriorImages[c]);
-    if (c < (numClasses-1))
-      warpf->SetEdgePaddingValue(0.0);
-    else
-      warpf->SetEdgePaddingValue(1.0);
-    warpf->SetDeformationField(m_DisplacementField);
-    warpf->SetOutputDirection(m_DeformationField->GetDirection());
-    warpf->SetOutputOrigin(m_DeformationField->GetOrigin());
-    warpf->SetOutputSpacing(m_DeformationField->GetSpacing());
-    warpf->Update();
-    m_WarpedPriorImages.Append(warpf->GetOutput());
-  }
-
-  return false;
 }
 
 #endif

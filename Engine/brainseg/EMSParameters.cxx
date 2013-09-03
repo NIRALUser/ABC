@@ -30,6 +30,8 @@ EMSParameters
 
   m_AtlasWarpFluidMaxStep = 0.5;
 
+  m_AtlasWarpKernelWidth = 10.0;
+
   //m_PriorWeights = std::vector<double>(4, 1.0);
 
   m_AtlasLinearMapType = "affine";
@@ -120,6 +122,7 @@ EMSParameters
     os << "Fluid atlas warping, with:" << std::endl;
     os << " - iterations = " << m_AtlasWarpFluidIterations << std::endl;
     os << " - max step" << m_AtlasWarpFluidMaxStep << std::endl;
+    os << " - kernel width" << m_AtlasWarpKernelWidth << std::endl;
   }
   else
   {

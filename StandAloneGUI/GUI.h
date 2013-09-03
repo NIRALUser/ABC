@@ -56,6 +56,7 @@ public:
   static Fl_Menu_Item menu_AtlasLinearMapTypeChoice[];
   Fl_Choice *ImageLinearMapTypeChoice;
   static Fl_Menu_Item menu_ImageLinearMapTypeChoice[];
+  Fl_Input *fluidKernelWidthInput;
   Fl_Group *tab2;
   Fl_Browser *imageBrowser;
 private:

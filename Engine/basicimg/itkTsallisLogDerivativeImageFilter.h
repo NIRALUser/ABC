@@ -16,51 +16,83 @@
  *
  *=========================================================================*/
 
-// Approximation of log using Taylor expansion around 1, better behaved for probability values in [0,1]
 // prastawa@sci.utah.edu 7/2013
 
-#ifndef __itkApproximateLogImageFilter_h
-#define __itkApproximateLogImageFilter_h
+#ifndef __itkTsallisLogDerivativeImageFilter_h
+#define __itkTsallisLogDerivativeImageFilter_h
 
 #include "itkUnaryFunctorImageFilter.h"
 #include "vnl/vnl_math.h"
+
+#include <cmath>
 
 namespace itk
 {
 namespace Functor
 {
 /**
- * \class ApproximateLog
+ * \class TsallisLogDerivative
  * \brief
  * \ingroup ITKImageIntensity
  */
 template< class TInput, class TOutput >
-class ApproximateLog
+class TsallisLogDerivative
 {
 public:
-  ApproximateLog() {}
-  ~ApproximateLog() {}
-  bool operator!=(const ApproximateLog &) const
+  TsallisLogDerivative() {}
+  ~TsallisLogDerivative() {}
+  bool operator!=(const TsallisLogDerivative &) const
   {
     return false;
   }
 
-  bool operator==(const ApproximateLog & other) const
+  bool operator==(const TsallisLogDerivative & other) const
   {
     return !( *this != other );
   }
 
   inline TOutput operator()(const TInput & A) const
   {
-    double A1 = static_cast< double >( A ) - 1.0;
-    double A1s = A1*A1;
-    double A1c = A1s*A1;
-    double A1q = A1s*A1s;
-    return static_cast< TOutput >( A1 - A1s / 2 + A1c / 3 - A1q / 4 );
+/*
+    double x = static_cast< double >( A );
+    if ((-1e-20 < x) && (x < 1e-20))
+      return 0;
+    return static_cast< TOutput >( 1.0 / x );
+*/
+    double q = 0.8;
+    double x = static_cast< double >( A );
+
+    return static_cast< TOutput >( pow(x + 0.001, -q) );
+
+/*
+    double x1 = x - 1.0;
+    //return static_cast< TOutput >( 1.0 - q*x1 + q*(q+1)*x1*x1 * (0.5 - (q+2)*x1/6.0) );
+    return static_cast< TOutput >( 1.0 - q*x1 );
+*/
+
+/*
+    double v = 1.0;
+
+    double x1pow = x1;
+    double qpow = q;
+    double nfac = 1;
+    for (int order = 1; order <= 5; order++)
+    {
+      if (order % 2 == 1)
+        v -= x1pow * qpow / nfac;
+      else
+        v += x1pow * qpow / nfac;
+      qpow *= (q + order);
+      x1pow *= x1;
+      nfac *= (order + 1);
+    }
+    return static_cast< TOutput >( v );
+*/
+
   }
 };
 }
-/** \class ApproximateLogImageFilter
+/** \class TsallisLogDerivativeImageFilter
  * \brief Computes the log() of each pixel.
  *
  * \ingroup IntensityImageFilters
@@ -68,18 +100,18 @@ public:
  * \ingroup ITKImageIntensity
  */
 template< class TInputImage, class TOutputImage >
-class ITK_EXPORT ApproximateLogImageFilter:
+class ITK_EXPORT TsallisLogDerivativeImageFilter:
   public
   UnaryFunctorImageFilter< TInputImage, TOutputImage,
-                           Functor::ApproximateLog< typename TInputImage::PixelType,
+                           Functor::TsallisLogDerivative< typename TInputImage::PixelType,
                                          typename TOutputImage::PixelType >   >
 {
 public:
   /** Standard class typedefs. */
-  typedef ApproximateLogImageFilter Self;
+  typedef TsallisLogDerivativeImageFilter Self;
   typedef UnaryFunctorImageFilter<
     TInputImage, TOutputImage,
-    Functor::ApproximateLog< typename TInputImage::PixelType,
+    Functor::TsallisLogDerivative< typename TInputImage::PixelType,
                   typename TOutputImage::PixelType > > Superclass;
 
   typedef SmartPointer< Self >       Pointer;
@@ -89,7 +121,7 @@ public:
   itkNewMacro(Self);
 
   /** Runtime information support. */
-  itkTypeMacro(ApproximateLogImageFilter,
+  itkTypeMacro(TsallisLogDerivativeImageFilter,
                UnaryFunctorImageFilter);
 
 #ifdef ITK_USE_CONCEPT_CHECKING
@@ -102,11 +134,11 @@ public:
 #endif
 
 protected:
-  ApproximateLogImageFilter() {}
-  virtual ~ApproximateLogImageFilter() {}
+  TsallisLogDerivativeImageFilter() {}
+  virtual ~TsallisLogDerivativeImageFilter() {}
 
 private:
-  ApproximateLogImageFilter(const Self &); //purposely not implemented
+  TsallisLogDerivativeImageFilter(const Self &); //purposely not implemented
   void operator=(const Self &); //purposely not implemented
 };
 } // end namespace itk

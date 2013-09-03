@@ -22,7 +22,8 @@
 
 #include "itkExpImageFilter.h"
 
-#include "itkApproximateLogImageFilter.h"
+#include "itkTsallisLogImageFilter.h"
+#include "itkLogImageFilter.h"
 #include "itkStatisticsImageFilter.h"
 
 #include "vnl/algo/vnl_determinant.h"
@@ -61,13 +62,16 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
   // Bias
   m_MaxBiasDegree = 4;
   //m_BiasLikelihoodTolerance = 1e-2;
-  m_BiasLikelihoodTolerance = 1e-3;
+// PP
+  m_BiasLikelihoodTolerance = 2e-4;
   // NOTE: warp tol needs to be <= bias tol
-  m_WarpLikelihoodTolerance = 1e-3;
+  m_WarpLikelihoodTolerance = 2e-4;
 
   // EM convergence parameters
-  m_LikelihoodTolerance = 1e-5;
-  m_MaximumIterations = 40;
+// PP
+  //m_LikelihoodTolerance = 1e-5;
+  m_LikelihoodTolerance = 2e-4;
+  m_MaximumIterations = 30;
 
   m_InputModified = false;
 
@@ -85,6 +89,8 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
   m_WarpFluidIterations = 10;
 
   m_WarpFluidMaxStep = 0.5;
+
+  m_WarpFluidKernelWidth = 10.0;
 
   m_InitialDistributionEstimator = "robust";
 }
@@ -537,7 +543,7 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
         }
   }
 
-/*
+#if 0
   // Dilate mask
   typedef itk::BinaryBallStructuringElement<unsigned char, 3> StructElementType;
   typedef
@@ -545,7 +551,7 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
       StructElementType> DilateType;
 
   StructElementType structel;
-  structel.SetRadius(3);
+  structel.SetRadius(2);
   structel.CreateStructuringElement();
 
   typename DilateType::Pointer dil = DilateType::New();
@@ -556,10 +562,11 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
   dil->Update();
 
   m_Mask = dil->GetOutput();
-*/
+#endif
 
 }
 
+#if 1
 template <class TInputImage, class TProbabilityImage>
 void
 EMSegmentationFilter <TInputImage, TProbabilityImage>
@@ -583,13 +590,26 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
   typedef itk::SubtractImageFilter<ProbabilityImageType, ProbabilityImageType, ProbabilityImageType>
     SubFilterType;
 
+  DynArray<ProbabilityImagePointer> maskedPosteriors;
+  for (unsigned int iclass = 0; iclass < numClasses; iclass++)
+  {
+    typedef itk::MultiplyImageFilter<ProbabilityImageType, ByteImageType, ProbabilityImageType>
+      MaskFilterType;
+    typename MaskFilterType::Pointer maskf = MaskFilterType::New();
+    maskf->SetInput1(m_Posteriors[iclass]);
+    maskf->SetInput2(m_Mask);
+    maskf->Update();
+
+    maskedPosteriors.Append(maskf->GetOutput());
+  }
+
   typedef itk::StatisticsImageFilter<ProbabilityImageType> StatFilterType;
 
   VectorType sumClassProb(numClasses);
   for (unsigned iclass = 0; iclass < numClasses; iclass++)
   {
     typename StatFilterType::Pointer statf = StatFilterType::New();
-    statf->SetInput(m_Posteriors[iclass]);
+    statf->SetInput(maskedPosteriors[iclass]);
     statf->Update();
     sumClassProb[iclass] = statf->GetSum() + 1e-20;
   }
@@ -601,7 +621,7 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
     for (unsigned int ichan = 0; ichan < numChannels; ichan++)
     {
       typename MulFilterType::Pointer mulf = MulFilterType::New();
-      mulf->SetInput1(m_Posteriors[iclass]);
+      mulf->SetInput1(maskedPosteriors[iclass]);
       mulf->SetInput2(m_CorrectedImages[ichan]);
       mulf->Update();
 
@@ -644,7 +664,7 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
       subf1->Update();
 
       typename MulFilterType::Pointer pmulf = MulFilterType::New();
-      pmulf->SetInput1(m_Posteriors[iclass]);
+      pmulf->SetInput1(maskedPosteriors[iclass]);
       pmulf->SetInput2(subf1->GetOutput());
       pmulf->Update();
 
@@ -688,8 +708,7 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
   } // end covariance loop
 
 }
-
-#if 0
+#else
 // Single threaded
 template <class TInputImage, class TProbabilityImage>
 void
@@ -1480,14 +1499,14 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
       m_Likelihoods[iclass] = addf->GetOutput();
     }
 
-    typename MulFilterType::Pointer mul2f = MulFilterType::New();
-    mul2f->SetInput1(m_Likelihoods[iclass]);
-    mul2f->SetConstant2(-0.5);
-    mul2f->Update();
+    typename MulFilterType::Pointer scalf = MulFilterType::New();
+    scalf->SetInput1(m_Likelihoods[iclass]);
+    scalf->SetConstant2(-0.5);
+    scalf->Update();
 
     typedef itk::ExpImageFilter<ProbabilityImageType, ProbabilityImageType> ExpFilterType;
     typename ExpFilterType::Pointer expf = ExpFilterType::New();
-    expf->SetInput(mul2f->GetOutput());
+    expf->SetInput(scalf->GetOutput());
     expf->Update();
 
     typename DivFilterType::Pointer divf = DivFilterType::New();
@@ -1644,8 +1663,12 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
 
   BiasCorrectorPointer biascorr = BiasCorrectorType::New();
 
-  biascorr->SetClampBias(false);
-  biascorr->SetMaximumBiasMagnitude(5.0);
+// TODO: need parameters for log(I)
+  //biascorr->SetMeans(m_Means.get_n_columns(0, numClasses-1));
+  //biascorr->SetCovariances(m_Covariances.Slice(0, numClasses-2));
+
+  biascorr->SetClampBias(true);
+  biascorr->SetMaximumBiasMagnitude(4.0);
   biascorr->SetMaxDegree(degree);
   biascorr->SetSampleSpacing(2.0*m_SampleSpacing);
   biascorr->SetWorkingSpacing(m_SampleSpacing);
@@ -1714,7 +1737,7 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
     m_Likelihoods.Append(lik);
   }
 
-  // Initialize first iteration posteriors with priors
+  // Initialize first iteration posteriors with masked, scaled priors
   for (unsigned iclass = 0; iclass < numClasses; iclass++)
   {
     unsigned iprior = m_PriorLookupTable[iclass];
@@ -1726,8 +1749,16 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
     mulf->SetConstant2(m_PriorWeights[iprior] / m_NumberOfGaussians[iprior]);
     mulf->Update();
 
-    m_Posteriors[iclass] = mulf->GetOutput();
+    typedef itk::MultiplyImageFilter<ProbabilityImageType, ByteImageType, ProbabilityImageType>
+      MaskFilterType;
+    typename MaskFilterType::Pointer maskf = MaskFilterType::New();
+    maskf->SetInput1(mulf->GetOutput());
+    maskf->SetInput2(m_Mask);
+    maskf->Update();
+
+    m_Posteriors[iclass] = maskf->GetOutput();
   }
+  this->NormalizePosteriors();
 
   // Compute the reference mean (first class)
   VectorType refMean(numChannels);
@@ -1773,7 +1804,8 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
 
   // Initialize warping vars
   m_WarpedTemplateImage = m_TemplateImage;
-  m_TemplateFluidDeformation = 0;
+  m_TemplateFluidMomenta = 0;
+  m_TemplateFluidVelocity = 0;
 
   //double logLikelihood = vnl_huge_val(1.0);
   double logLikelihood = 1.0 / vnl_math::eps;
@@ -1855,14 +1887,26 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
       {
         biasdegree++;
       }
+/*
       if (dowarp)
         this->CorrectBias(biasdegree, true);
       else
         this->CorrectBias(biasdegree, false);
+*/
+      // Need to correct all voxels with multithreaded EM
+      this->CorrectBias(biasdegree, true);
+
+      // Disable warping if bias correction is enabled but not yet performed
+      if (biasdegree < m_MaxBiasDegree)
+        dowarp = false;
     }
 
     if (dowarp)
+    {
+      this->ComputePosteriors(true); // Update likelihood images before warping
       this->ComputeAtlasWarpingFromProbabilities();
+      this->ComputePosteriors(true); // Update posteriors after warping // TODO: separate computelik computepost?
+    }
 
     // Convergence check
     converged =
@@ -2003,7 +2047,7 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
       StructElementType> ErodeType;
 
   StructElementType structel;
-  structel.SetRadius(2);
+  structel.SetRadius(3);
   structel.CreateStructuringElement();
 
   typename ErodeType::Pointer erode = ErodeType::New();
@@ -2132,18 +2176,19 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
 {
   itkDebugMacro(<< "NormalizePosteriors");
 
+  typedef itk::AddImageFilter<ProbabilityImageType, ProbabilityImageType, ProbabilityImageType>
+    AddFilterType;
+
   unsigned int numClasses = m_Posteriors.GetSize();
 
   ProbabilityImagePointer sumPImg = ProbabilityImageType::New();
   sumPImg->CopyInformation(m_Posteriors[0]);
   sumPImg->SetRegions(m_Posteriors[0]->GetLargestPossibleRegion());
   sumPImg->Allocate();
-  sumPImg->FillBuffer(1e-20);
+  sumPImg->FillBuffer(0);
 
   for (unsigned int iclass = 0; iclass < numClasses; iclass++)
   {
-    typedef itk::AddImageFilter<ProbabilityImageType, ProbabilityImageType, ProbabilityImageType>
-      AddFilterType;
     typename AddFilterType::Pointer addf = AddFilterType::New();
     addf->SetInput1(sumPImg);
     addf->SetInput2(m_Posteriors[iclass]);
@@ -2152,7 +2197,8 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
     sumPImg = addf->GetOutput();
   }
 
-  typedef itk::ApproximateLogImageFilter<ProbabilityImageType, ProbabilityImageType> LogFilterType;
+  //typedef itk::LogImageFilter<ProbabilityImageType, ProbabilityImageType> LogFilterType;
+  typedef itk::TsallisLogImageFilter<ProbabilityImageType, ProbabilityImageType> LogFilterType;
   typename LogFilterType::Pointer logf = LogFilterType::New();
   logf->SetInput(sumPImg);
   logf->Update();
@@ -2163,6 +2209,12 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
   statf->Update();
 
   double logL = statf->GetSum();
+
+  typename AddFilterType::Pointer epsf = AddFilterType::New();
+  epsf->SetInput1(sumPImg);
+  epsf->SetConstant2(1e-20);
+  epsf->Update();
+  sumPImg = epsf->GetOutput();
 
   for (unsigned int iclass = 0; iclass < numClasses; iclass++)
   {
@@ -2186,7 +2238,7 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
 {
   itkDebugMacro(<< "ComputeAtlasWarpingFromProbabilities");
 
-  muLogMacro(<< "Computing fluid warping with " << m_WarpFluidIterations
+  muLogMacro(<< "  Computing fluid warping with " << m_WarpFluidIterations
     << " iterations\n");
 
   if (m_WarpFluidIterations == 0)
@@ -2228,15 +2280,17 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
   fluid->SetLikelihoodImages(mergedLikelihoods);
   fluid->SetPriorImages(m_Priors);
 
-  fluid->SetInitialDisplacementField(m_TemplateFluidDeformation);
+  fluid->SetInitialMomenta(m_TemplateFluidMomenta);
   //fluid->SetMask(m_OriginalMask);
   fluid->SetIterations(m_WarpFluidIterations);
   fluid->SetMaxStep(m_WarpFluidMaxStep);
-  fluid->SetKernelWidth(15.0);
+  fluid->SetKernelWidth(m_WarpFluidKernelWidth);
+  fluid->SetRegularityWeight(1e-12);
   fluid->SetNumberOfScales(1);
   fluid->Update();
 
-  m_TemplateFluidDeformation = fluid->GetDisplacementField();
+  m_TemplateFluidMomenta = fluid->GetMomenta();
+  m_TemplateFluidVelocity = fluid->GetVelocity();
 
   m_Priors = fluid->GetWarpedPriorImages();
 
@@ -2245,11 +2299,11 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
 
   // Warp the template image
   typedef itk::WarpImageFilter<
-    InputImageType, InputImageType, DeformationFieldType>
+    InputImageType, InputImageType, VectorFieldType>
     WarperType;
   typename WarperType::Pointer warpf = WarperType::New();
   warpf->SetInput(m_TemplateImage);
-  warpf->SetDeformationField(m_TemplateFluidDeformation);
+  warpf->SetDisplacementField(m_TemplateFluidVelocity);
   warpf->SetOutputDirection(m_TemplateImage->GetDirection());
   warpf->SetOutputOrigin(m_TemplateImage->GetOrigin());
   warpf->SetOutputSpacing(m_TemplateImage->GetSpacing());
@@ -2296,21 +2350,21 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
   movingSet.Append(matchImg);
   fluid->SetMovingImages(movingSet);
 
-  fluid->SetInitialDisplacementField(m_TemplateFluidDeformation);
+  fluid->SetInitialDisplacementField(m_TemplateFluidVelocity);
   //fluid->SetMask(m_OriginalMask);
   fluid->SetIterations(m_WarpFluidIterations);
   fluid->SetMaxStep(m_WarpFluidMaxStep);
-  fluid->SetKernelWidth(15.0);
-  fluid->SetNumberOfScales(1);
+  fluid->SetKernelWidth(m_WarpFluidKernelWidth);
+  fluid->SetNumberOfScales(2);
   fluid->Update();
 
-  m_TemplateFluidDeformation = fluid->GetDisplacementField();
+  m_TemplateFluidVelocity = fluid->GetDisplacementField();
 
   m_Priors.Clear();
   for (unsigned int i = 0; i < numPriors; i++)
   {
     typedef itk::WarpImageFilter<
-      ProbabilityImageType, ProbabilityImageType, DeformationFieldType>
+      ProbabilityImageType, ProbabilityImageType, VectorFieldType>
       WarperType;
     typename WarperType::Pointer warpf = WarperType::New();
     warpf->SetInput(m_OriginalPriors[i]);
@@ -2318,7 +2372,7 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
       warpf->SetEdgePaddingValue(0.0);
     else
       warpf->SetEdgePaddingValue(1.0);
-    warpf->SetDeformationField(m_TemplateFluidDeformation);
+    warpf->SetDisplacementField(m_TemplateFluidVelocity);
     warpf->SetOutputDirection(m_OriginalPriors[i]->GetDirection());
     warpf->SetOutputOrigin(m_OriginalPriors[i]->GetOrigin());
     warpf->SetOutputSpacing(m_OriginalPriors[i]->GetSpacing());
@@ -2331,11 +2385,11 @@ EMSegmentationFilter <TInputImage, TProbabilityImage>
 
   // Warp the template image
   typedef itk::WarpImageFilter<
-    InputImageType, InputImageType, DeformationFieldType>
+    InputImageType, InputImageType, VectorFieldType>
     WarperType;
   typename WarperType::Pointer warpf = WarperType::New();
   warpf->SetInput(m_TemplateImage);
-  warpf->SetDeformationField(m_TemplateFluidDeformation);
+  warpf->SetDisplacementField(m_TemplateFluidVelocity);
   warpf->SetOutputDirection(m_TemplateImage->GetDirection());
   warpf->SetOutputOrigin(m_TemplateImage->GetOrigin());
   warpf->SetOutputSpacing(m_TemplateImage->GetSpacing());

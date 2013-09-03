@@ -84,9 +84,9 @@ public:
   typedef typename ProbabilityImageType::SizeType ProbabilityImageSizeType;
   typedef typename ProbabilityImageType::SpacingType ProbabilityImageSpacingType;
 
-  typedef itk::Vector<float, 3> DisplacementType;
-  typedef itk::Image<DisplacementType, 3> DeformationFieldType;
-  typedef typename DeformationFieldType::Pointer DeformationFieldPointer;
+  typedef itk::Vector<float, 3> VectorPixelType;
+  typedef itk::Image<VectorPixelType, 3> VectorFieldType;
+  typedef typename VectorFieldType::Pointer VectorFieldPointer;
 
   typedef vnl_vector<double> VectorType;
   typedef vnl_matrix<double> MatrixType;
@@ -143,7 +143,9 @@ public:
   void WarpingOff() { m_DoWarp = false; }
 
   itkGetMacro(TemplateBSplineTransform, BSplineTransformPointer);
-  itkGetMacro(TemplateFluidDeformation, DeformationFieldPointer);
+
+  itkGetMacro(TemplateFluidMomenta, VectorFieldPointer);
+  itkGetMacro(TemplateFluidVelocity, VectorFieldPointer);
 
   itkGetMacro(WarpedTemplateImage, InputImagePointer);
 
@@ -152,6 +154,9 @@ public:
 
   itkGetConstMacro(WarpFluidMaxStep, double);
   itkSetMacro(WarpFluidMaxStep, double);
+
+  itkGetConstMacro(WarpFluidKernelWidth, double);
+  itkSetMacro(WarpFluidKernelWidth, double);
 
   itkGetConstMacro(InitialDistributionEstimator, std::string);
   itkSetMacro(InitialDistributionEstimator, std::string);
@@ -238,11 +243,14 @@ private:
 
   BSplineTransformPointer m_TemplateBSplineTransform;
 
-  DeformationFieldPointer m_TemplateFluidDeformation;
+  VectorFieldPointer m_TemplateFluidMomenta;
+  VectorFieldPointer m_TemplateFluidVelocity;
 
   unsigned int m_WarpFluidIterations;
 
   double m_WarpFluidMaxStep;
+
+  double m_WarpFluidKernelWidth;
 
   double m_WarpLikelihoodTolerance;
 

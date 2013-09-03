@@ -140,6 +140,11 @@ EMSParametersXMLFileReader
     double ms = atof(m_CurrentString.c_str());
     m_PObject->SetAtlasWarpFluidMaxStep(ms);
   }
+  else if(itksys::SystemTools::Strucmp(name,"ATLAS-WARP-KERNEL-WIDTH") == 0)
+  {
+    double w = atof(m_CurrentString.c_str());
+    m_PObject->SetAtlasWarpKernelWidth(w);
+  }
   else if(itksys::SystemTools::Strucmp(name,"ATLAS-LINEAR-MAP-TYPE") == 0)
   {
     m_PObject->SetAtlasLinearMapType(m_CurrentString);
@@ -269,6 +274,8 @@ EMSParametersXMLFileWriter
   WriteField<unsigned int>(this, "ATLAS-WARP-FLUID-ITERATIONS", p->GetAtlasWarpFluidIterations(), output);
   
   WriteField<float>(this, "ATLAS-WARP-FLUID-MAX-STEP", p->GetAtlasWarpFluidMaxStep(), output);
+
+  WriteField<float>(this, "ATLAS-WARP-KERNEL-WIDTH", p->GetAtlasWarpKernelWidth(), output);
 
   WriteField<std::string>(this, "ATLAS-LINEAR-MAP-TYPE", p->GetAtlasLinearMapType(), output);
 

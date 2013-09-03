@@ -37,9 +37,9 @@ public:
   typedef typename ImageType::SizeType ImageSizeType;
   typedef typename ImageType::SpacingType ImageSpacingType;
 
-  typedef itk::Vector<float, Dimension> DisplacementType;
-  typedef itk::Image<DisplacementType, Dimension> DeformationFieldType;
-  typedef typename DeformationFieldType::Pointer DeformationFieldPointer;
+  typedef itk::Vector<float, Dimension> VectorType;
+  typedef itk::Image<VectorType, Dimension> VectorFieldType;
+  typedef typename VectorFieldType::Pointer VectorFieldPointer;
 
   typedef itk::Image<unsigned char, Dimension> MaskType;
   typedef typename MaskType::Pointer MaskPointer;
@@ -56,22 +56,17 @@ public:
 
   itkSetMacro(KernelWidth, double);
 
-  void SetInitialDisplacementField(DeformationFieldPointer def)
-  { m_InitialDisplacementField = def; }
+  itkSetMacro(RegularityWeight, double);
 
-  DeformationFieldPointer GetDeformationField()
-  { if (m_Modified) this->Update(); return m_DeformationField; }
-  DeformationFieldPointer GetDisplacementField()
-  { if (m_Modified) this->Update(); return m_DisplacementField; }
+  void SetInitialMomenta(VectorFieldPointer A)
+  { m_InitialMomenta = A; }
 
-/*
-  // TODO
-  DeformationFieldPointer GetInverseDeformationField()
-  { if (m_Modified) this->Update(); return m_InverseDeformationField; }
-  DeformationFieldPointer GetDisplacementField()
-  { if (m_Modified) this->Update(); return m_InverseDisplacementField; }
-*/
+  VectorFieldPointer GetMomenta()
+  { if (m_Modified) this->Update(); return m_Momenta; }
+  VectorFieldPointer GetVelocity()
+  { if (m_Modified) this->Update(); return m_Velocity; }
 
+  // TODO GetInverseMapping ?
 
   DynArray<ImagePointer> GetWarpedPriorImages()
   { if (m_Modified) this->Update(); return m_WarpedPriorImages; }
@@ -83,9 +78,15 @@ protected:
   MaxLikelihoodFluidWarpEstimator();
   ~MaxLikelihoodFluidWarpEstimator();
 
-  //DeformationFieldPointer DeformationToDisplacement(DeformationFieldPointer h);
+  double ComputeObjective(VectorFieldPointer v);
+  void ComputeGradient();
+
+  //VectorFieldPointer DeformationToDisplacement(VectorFieldPointer h);
 
   void ScaleLikelihoodImages();
+
+  VectorFieldPointer ApplyKernel(VectorFieldPointer img);
+  VectorFieldPointer ApplyKernelFlip(VectorFieldPointer img);
 
   ImagePointer DownsampleImage(ImagePointer img, ImageSizeType sz, ImageSpacingType sp);
   ImagePointer UpsampleImage(ImagePointer img, ImageSizeType sz, ImageSpacingType sp);
@@ -93,10 +94,9 @@ protected:
   //MaskPointer DownsampleMask(MaskPointer img, ImageSizeType sz, ImageSpacingType sp);
   //MaskPointer UpsampleMask(MaskPointer img, ImageSizeType sz, ImageSpacingType sp);
 
-  DeformationFieldPointer DownsampleDeformation(DeformationFieldPointer img, ImageSizeType sz, ImageSpacingType sp);
+  VectorFieldPointer DownsampleDisplacement(VectorFieldPointer img, ImageSizeType sz, ImageSpacingType sp);
 
-  DeformationFieldPointer UpsampleDeformation(DeformationFieldPointer img, ImageSizeType sz, ImageSpacingType sp);
-  DeformationFieldPointer UpsampleDisplacement(DeformationFieldPointer img, ImageSizeType sz, ImageSpacingType sp);
+  VectorFieldPointer UpsampleDisplacement(VectorFieldPointer img, ImageSizeType sz, ImageSpacingType sp);
 
   bool Step();
 
@@ -104,6 +104,10 @@ protected:
   double m_MaxStep;
 
   double m_KernelWidth;
+
+  double m_CurrentKernelWidth;
+
+  double m_RegularityWeight;
 
   double m_Delta;
 
@@ -117,12 +121,13 @@ protected:
 
   DynArray<ImagePointer> m_WarpedPriorImages;
 
-  DeformationFieldPointer m_DeformationField;
-  //DeformationFieldPointer m_InverseDeformationField;
+  VectorFieldPointer m_Momenta;
 
-  DeformationFieldPointer m_DisplacementField;
+  VectorFieldPointer m_InitialMomenta;
 
-  DeformationFieldPointer m_InitialDisplacementField;
+  VectorFieldPointer m_Velocity;
+
+  VectorFieldPointer m_GradientMomenta;
 
   bool m_Modified;
 

@@ -275,7 +275,7 @@ Fl_Menu_Item GUI::menu_[] = {
 };
 
 Fl_Double_Window* GUI::MakeWindow() {
-  { aboutwindow = new Fl_Double_Window(612, 668, "ABC: About");
+  { aboutwindow = new Fl_Double_Window(610, 665, "ABC: About");
     aboutwindow->user_data((void*)(this));
     { Fl_Box* o = new Fl_Box(5, 5, 600, 600, "\r\nABC (Atlas Based Classification) GUI v1.5\r\n\r\nMarcel Prastawa\r\nprast\
 awa@@sci.utah.edu\r\nhttp://www.sci.utah.edu/~prastawa\r\n\r\nThis software is\
@@ -320,7 +320,6 @@ brain. IEEE TMI 1999; 18:885-896\r\n");
       o->box(FL_UP_BOX);
       { tab1 = new Fl_Group(10, 65, 605, 575, "Step 1");
         tab1->align(Fl_Align(129));
-        tab1->hide();
         { Fl_Button* o = new Fl_Button(500, 605, 80, 30, "Next");
           o->callback((Fl_Callback*)cb_Next);
         } // Fl_Button* o
@@ -356,7 +355,7 @@ brain. IEEE TMI 1999; 18:885-896\r\n");
         } // Fl_Box* o
         { atlasOrientInput = new Fl_Input(135, 260, 300, 30, "Atlas Orientation");
         } // Fl_Input* atlasOrientInput
-        { warpAtlasButton = new Fl_Check_Button(25, 560, 25, 30, "Warp atlas to subject");
+        { warpAtlasButton = new Fl_Check_Button(25, 560, 25, 30, "Enable warping");
           warpAtlasButton->down_box(FL_DOWN_BOX);
         } // Fl_Check_Button* warpAtlasButton
         { Fl_Box* o = new Fl_Box(25, 525, 580, 30, "Deformable registration of atlas to subject");
@@ -364,9 +363,9 @@ brain. IEEE TMI 1999; 18:885-896\r\n");
           o->color((Fl_Color)175);
           o->align(Fl_Align(FL_ALIGN_LEFT|FL_ALIGN_INSIDE));
         } // Fl_Box* o
-        { fluidItersInput = new Fl_Input(303, 560, 40, 30, "Fluid iterations:");
+        { fluidItersInput = new Fl_Input(258, 560, 40, 30, "Iterations:");
         } // Fl_Input* fluidItersInput
-        { fluidMaxStepInput = new Fl_Input(470, 560, 40, 30, "Fluid max step:");
+        { fluidMaxStepInput = new Fl_Input(363, 560, 40, 30, "Max step:");
         } // Fl_Input* fluidMaxStepInput
         { Fl_Box* o = new Fl_Box(25, 375, 580, 30, "Initial distribution estimator");
           o->box(FL_FLAT_BOX);
@@ -390,9 +389,12 @@ brain. IEEE TMI 1999; 18:885-896\r\n");
           ImageLinearMapTypeChoice->down_box(FL_BORDER_BOX);
           ImageLinearMapTypeChoice->menu(menu_ImageLinearMapTypeChoice);
         } // Fl_Choice* ImageLinearMapTypeChoice
+        { fluidKernelWidthInput = new Fl_Input(498, 560, 40, 30, "Kernel width:");
+        } // Fl_Input* fluidKernelWidthInput
         tab1->end();
       } // Fl_Group* tab1
       { tab2 = new Fl_Group(10, 65, 605, 575, "Step 2");
+        tab2->hide();
         { imageBrowser = new Fl_Browser(25, 128, 450, 120, "Images:");
           imageBrowser->type(2);
           imageBrowser->align(Fl_Align(FL_ALIGN_TOP_LEFT));
@@ -587,6 +589,7 @@ EMSParameters::Pointer GUI::GetParameters() {
   
   
   p->SetAtlasWarpFluidMaxStep(atof(fluidMaxStepInput->value()));
+  p->SetAtlasWarpKernelWidth(atof(fluidKernelWidthInput->value()));
   
   return p;
 }
@@ -671,5 +674,10 @@ void GUI::SetGUIElements(EMSParameters::Pointer p) {
   std::stringstream oss;
   oss << p->GetAtlasWarpFluidMaxStep() << std::ends;
   fluidMaxStepInput->value(oss.str().c_str());
+  }
+  {
+  std::stringstream oss;
+  oss << p->GetAtlasWarpKernelWidth() << std::ends;
+  fluidKernelWidthInput->value(oss.str().c_str());
   }
 }

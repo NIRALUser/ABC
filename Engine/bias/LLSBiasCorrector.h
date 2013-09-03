@@ -137,7 +137,9 @@ protected:
   ~LLSBiasCorrector();
 
   void CheckInputs();
-  void ComputeDistributions();
+
+  // Compute distributions on log transformed intensities
+  void ComputeLogDistributions();
 
 private:
 

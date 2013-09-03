@@ -68,6 +68,9 @@ public:
   itkGetMacro(AtlasWarpFluidMaxStep, float);
   itkSetMacro(AtlasWarpFluidMaxStep, float);
 
+  itkGetMacro(AtlasWarpKernelWidth, float);
+  itkSetMacro(AtlasWarpKernelWidth, float);
+
   void AppendPriorWeight(double w)
   { m_PriorWeights.push_back(w); }
 
@@ -103,6 +106,8 @@ protected:
   unsigned int m_AtlasWarpFluidIterations;
 
   float m_AtlasWarpFluidMaxStep;
+
+  float m_AtlasWarpKernelWidth;
 
   std::string m_OutputDirectory;
   std::string m_OutputFormat;
