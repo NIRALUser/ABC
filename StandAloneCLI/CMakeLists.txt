@@ -44,7 +44,16 @@ SET(ABC_CLI_SRCS
   ../Engine/xmlio/EMSParametersXMLFile.cxx
   main_cli.cxx
 )
+OPTION( ABC_CLI_NO_SUFFIX "Name ABC_CLI ABC (no suffix)" OFF)
+if( ABC_CLI_NO_SUFFIX AND COMPILE_SLICER4COMMANDLINE )
+  message(WARNING "Setting ABC_CLI_NO_SUFFIX and COMPILE_SLICER4COMMANDLINE to ON will create errors as multiple targets will have the same name.")
+endif()
+if( ABC_CLI_NO_SUFFIX )
+  set( TargetName ABC )
+else()
+  set( TargetName ABC_CLI )
+endif()
+ADD_EXECUTABLE(${TargetName} ${ABC_CLI_SRCS})
+TARGET_LINK_LIBRARIES(${TargetName} ${ITK_LIBRARIES})
 
-ADD_EXECUTABLE(ABC_CLI ${ABC_CLI_SRCS})
 
-TARGET_LINK_LIBRARIES(ABC_CLI ${ITK_LIBRARIES})
