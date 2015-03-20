@@ -77,6 +77,10 @@ EMSParametersXMLFileReader
   {
     m_PObject->SetOutputDirectory(m_CurrentString);
   }
+  else if(itksys::SystemTools::Strucmp(name,"ATLAS-FORMAT") == 0)
+  {
+    m_PObject->SetAtlasFormat(m_CurrentString);
+  }
   else if(itksys::SystemTools::Strucmp(name,"OUTPUT-FORMAT") == 0)
   {
     m_PObject->SetOutputFormat(m_CurrentString);

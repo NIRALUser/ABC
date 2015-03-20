@@ -97,6 +97,9 @@ public:
   itkGetMacro(OutputDirectory, std::string);
   itkSetMacro(OutputDirectory, std::string);
 
+  itkGetMacro(AtlasFormat, std::string);
+  itkSetMacro(AtlasFormat, std::string);
+
   void SetAtlasDirectory(const std::string& dir);
 
   void SetImageFileNames(StringList filenames);
@@ -173,6 +176,7 @@ private:
 
   std::string m_TemplateFileName;
 
+  std::string m_AtlasFormat;
 // HACK
   std::string m_OtherTemplateFileName;
 

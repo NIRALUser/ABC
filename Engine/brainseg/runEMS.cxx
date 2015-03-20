@@ -32,7 +32,7 @@
 #include <iostream>
 #include <string>
 #include <sstream>
-
+#include <algorithm>
 #include <stdlib.h>
 
 typedef itk::Image<float, 3> FloatImageType;
@@ -42,6 +42,54 @@ typedef itk::Image<short, 3> ShortImageType;
 typedef FloatImageType::Pointer FloatImagePointer;
 typedef ByteImageType::Pointer ByteImagePointer;
 typedef ShortImageType::Pointer ShortImagePointer;
+
+
+std::string
+CheckImageFormat( std::string format , bool input = false )//if input format, we do not set default to ".mha"
+{
+  std::string ext ;
+  format.erase( format.find_last_not_of( " \n\r\t") + 1 ) ;//if XML empty, format is just white spaces. We remove them.
+  std::transform( format.begin(), format.end(), format.begin(), ::tolower ) ;//set string to lower case to simplify the comparisons
+  if( !format.compare( "analyze" ) )
+  {
+    ext = ".hdr" ;
+  }
+  else if( !format.compare( "meta" ) )
+  {
+    ext = ".mha" ;
+  }
+  else if( !format.compare( "hdr" )
+        || !format.compare( "gipl" )
+        || !format.compare( "gipl.gz" )
+        || !format.compare( "nrrd" )
+        || !format.compare( "nhdr" )
+        || !format.compare( "nii.gz" )
+        || !format.compare( "nii" )
+        || !format.compare( "mha" )
+        || !format.compare( "mhd" )
+         )
+  {
+    ext = "." + format ;
+  }
+  else if( format.compare(" ") && input == false )
+  {
+    ext = ".mha" ;
+  }
+  else
+  {
+    std::string str_error = "\'" + format + "\' is not a recognized format. Verify that your type is one of the following:\n\
+    analyze\n\
+    hdr\n\
+    gipl\n\
+    gipl.gz\n\
+    nrrd\n\
+    nhdr\n\
+    nii\n\
+    nii.gz" ;
+    throw str_error ;
+  }
+  return ext ;
+}
 
 void
 runEMS(EMSParameters* emsp, bool debugflag, bool writemoreflag)
@@ -89,31 +137,19 @@ runEMS(EMSParameters* emsp, bool debugflag, bool writemoreflag)
 
   // Set up suffix string for images
   std::string fmt = emsp->GetOutputFormat();
-  std::string outext = ".mha";
-  if (itksys::SystemTools::Strucmp(fmt.c_str(), "Analyze") == 0)
-    outext = ".hdr";
-  else if (itksys::SystemTools::Strucmp(fmt.c_str(), "GIPL") == 0)
-    outext = ".gipl";
-  else if (itksys::SystemTools::Strucmp(fmt.c_str(), "Nrrd") == 0)
-    outext = ".nrrd";
-  else if (itksys::SystemTools::Strucmp(fmt.c_str(), "Meta") == 0)
-    outext = ".mha";
-  else if (itksys::SystemTools::Strucmp(fmt.c_str(), "Nifti") == 0)
-    outext = ".nii";
-  else
-  {
-    muLogMacro(<< "WARNING: output format unrecognized, using Meta format\n");
-  }
+  std::string outext = CheckImageFormat( emsp->GetOutputFormat() ) ;
   std::string suffstr =
-    std::string("_") + std::string(emsp->GetSuffix()) + outext;
-  std::string metasuffstr =
-    std::string("_") + std::string(emsp->GetSuffix()) + std::string(".mha");
+  std::string("_") + std::string(emsp->GetSuffix()) + outext;
 
   std::vector<double> prWeights = emsp->GetPriorWeights();
 
   muLogMacro(<< "ABC: Atlas Based Classification\n");
   muLogMacro(<< "========================================\n");
+  #ifdef ABC_VERSION
+  muLogMacro(<< "Version " << ABC_VERSION << "\n");
+  #else
   muLogMacro(<< "Version 1.5" << "\n");
+  #endif
   muLogMacro(<< "Program compiled on: " << __DATE__ << "\n");
   muLogMacro(<< "\n");
 
@@ -132,6 +168,7 @@ runEMS(EMSParameters* emsp, bool debugflag, bool writemoreflag)
   muLogMacro(<< "Suffix: " << emsp->GetSuffix() << "\n");
   muLogMacro(<< "Atlas Directory: " << emsp->GetAtlasDirectory() << "\n");
   muLogMacro(<< "Atlas Orientation: " << emsp->GetAtlasOrientation() << "\n");
+  muLogMacro(<< "Atlas Format: " << emsp->GetAtlasFormat() << "\n");
   muLogMacro(<< "Output Directory: " << emsp->GetOutputDirectory() << "\n");
   muLogMacro(<< "Output Format: " << emsp->GetOutputFormat() << "\n");
   muLogMacro(<< "Input images: \n");
@@ -184,7 +221,7 @@ runEMS(EMSParameters* emsp, bool debugflag, bool writemoreflag)
     atlasreg->SetPrefilteringMethod(emsp->GetFilterMethod().c_str());
     atlasreg->SetPrefilteringIterations(emsp->GetFilterIterations());
     atlasreg->SetPrefilteringTimeStep(emsp->GetFilterTimeStep());
-
+    atlasreg->SetAtlasFormat( CheckImageFormat( emsp->GetAtlasFormat() , true ) ) ;
     atlasreg->SetSuffix(emsp->GetSuffix());
 
     atlasreg->SetAtlasOrientation(emsp->GetAtlasOrientation());

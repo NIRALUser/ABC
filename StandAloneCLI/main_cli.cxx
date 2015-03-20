@@ -11,6 +11,7 @@
 #include <exception>
 #include <iostream>
 
+#define ABC_VERSION "1.5.1"
 
 void
 printUsage(char* progname)
@@ -18,6 +19,7 @@ printUsage(char* progname)
   std::cerr << "Usage: " << progname << " <segfile> [options]" << std::endl;
   std::cerr << "Available options:" << std::endl;
   std::cerr << "--debug:\tdisplay debug messages" << std::endl;
+  std::cerr << "--version:\tdisplay tools version and exit" << std::endl;
   std::cerr << "--write-less:\tdon't write posteriors and filtered, bias corrected images";
   std::cerr << std::endl;
 }
@@ -26,13 +28,19 @@ int
 main(int argc, char** argv)
 {
 
-  std::cerr << "Run without any arguments to see command line options" << std::endl;
-
   if (argc < 2)
   {
     printUsage(argv[0]);
     return -1;
   }
+
+  if (strcmp(argv[1], "--version") == 0)
+  {
+   std::cerr << "ABC version: " << ABC_VERSION << std::endl ;
+   return 0;
+  }
+
+  std::cerr << "Run without any arguments to see command line options" << std::endl;
 
   bool validargs = true;
 

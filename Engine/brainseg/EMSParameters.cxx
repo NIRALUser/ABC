@@ -40,6 +40,7 @@ EMSParameters
   m_InitialDistributionEstimator = "robust";
 
   m_NumberOfThreads = 4;
+  m_AtlasFormat = "mha" ; //In case the format is not specified, we use the old default format 
 }
 
 EMSParameters

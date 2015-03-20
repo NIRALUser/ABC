@@ -44,6 +44,9 @@ public:
   itkGetMacro(OutputFormat, std::string);
   itkSetMacro(OutputFormat, std::string);
 
+  itkGetMacro(AtlasFormat, std::string);
+  itkSetMacro(AtlasFormat, std::string);
+
   void AddImage(std::string s, std::string orientation);
   void ClearImages();
 
@@ -97,7 +100,7 @@ protected:
   ~EMSParameters();
 
   std::string m_Suffix;
-
+  std::string m_AtlasFormat;
   std::string m_AtlasDirectory;
   std::string m_AtlasOrientation;
 
