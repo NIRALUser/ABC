@@ -56,4 +56,5 @@ endif()
 ADD_EXECUTABLE(${TargetName} ${ABC_CLI_SRCS})
 TARGET_LINK_LIBRARIES(${TargetName} ${ITK_LIBRARIES})
 
+install(TARGETS ${TargetName} RUNTIME DESTINATION bin)
 
