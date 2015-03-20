@@ -145,11 +145,7 @@ runEMS(EMSParameters* emsp, bool debugflag, bool writemoreflag)
 
   muLogMacro(<< "ABC: Atlas Based Classification\n");
   muLogMacro(<< "========================================\n");
-  #ifdef ABC_VERSION
   muLogMacro(<< "Version " << ABC_VERSION << "\n");
-  #else
-  muLogMacro(<< "Version 1.5" << "\n");
-  #endif
   muLogMacro(<< "Program compiled on: " << __DATE__ << "\n");
   muLogMacro(<< "\n");
 

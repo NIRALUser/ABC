@@ -7,6 +7,8 @@
 #ifndef _runEMS_h
 #define _runEMS_h
 
+#define ABC_VERSION "1.5.1"
+
 #include "EMSParameters.h"
 
 void runEMS(EMSParameters* params, bool debugflag, bool writemoreflag);

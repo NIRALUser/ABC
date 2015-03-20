@@ -11,8 +11,6 @@
 #include <exception>
 #include <iostream>
 
-#define ABC_VERSION "1.5.1"
-
 void
 printUsage(char* progname)
 {
