@@ -7,7 +7,6 @@
 #include "itkBinaryBallStructuringElement.h"
 #include "itkBinaryDilateImageFilter.h"
 #include "itkBinaryErodeImageFilter.h"
-#include "itkBoxMeanImageFilter.h"
 #include "itkBSplineDownsampleImageFilter.h"
 #include "itkDiscreteGaussianImageFilter.h"
 #include "itkImageDuplicator.h"

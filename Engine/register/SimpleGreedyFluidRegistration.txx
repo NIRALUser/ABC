@@ -371,7 +371,7 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
       typename WarperType::Pointer warpf = WarperType::New();
       warpf->SetInput(m_MovingImages[c]);
       warpf->SetEdgePaddingValue(0.0);
-      warpf->SetDeformationField(m_DisplacementField);
+      warpf->SetDisplacementField(m_DisplacementField);
       warpf->SetOutputDirection(m_DeformationField->GetDirection());
       warpf->SetOutputOrigin(m_DeformationField->GetOrigin());
       warpf->SetOutputSpacing(m_DeformationField->GetSpacing());
@@ -439,7 +439,7 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
     typename WarperType::Pointer warpf = WarperType::New();
     warpf->SetInput(m_MovingImages[ichan]);
     warpf->SetEdgePaddingValue(0.0);
-    warpf->SetDeformationField(m_DisplacementField);
+    warpf->SetDisplacementField(m_DisplacementField);
     warpf->SetOutputDirection(m_DeformationField->GetDirection());
     warpf->SetOutputOrigin(m_DeformationField->GetOrigin());
     warpf->SetOutputSpacing(m_DeformationField->GetSpacing());
@@ -592,7 +592,7 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
     ComposerType;
   typename ComposerType::Pointer compf = ComposerType::New();
   compf->SetInput(m_DeformationField);
-  compf->SetDeformationField(velocF);
+  compf->SetDisplacementField(velocF);
   compf->SetEdgePaddingValue(edgev);
   compf->SetOutputDirection(m_DeformationField->GetDirection());
   compf->SetOutputOrigin(m_DeformationField->GetOrigin());
@@ -641,7 +641,7 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
     typename WarperType::Pointer warpf = WarperType::New();
     warpf->SetInput(m_DownMovingImages[ichan]);
     warpf->SetEdgePaddingValue(0.0);
-    warpf->SetDeformationField(m_DisplacementField);
+    warpf->SetDisplacementField(m_DisplacementField);
     warpf->SetOutputDirection(m_DeformationField->GetDirection());
     warpf->SetOutputOrigin(m_DeformationField->GetOrigin());
     warpf->SetOutputSpacing(m_DeformationField->GetSpacing());

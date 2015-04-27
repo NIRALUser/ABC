@@ -737,7 +737,7 @@ PairRegistrationMethod<TPixel>
   metric->ReinitializeSeed( 76926294 );
 
   registration->SetNumberOfLevels(1);
-  registration->StartRegistration();
+  registration->Update();
 
   btrafo->SetParametersByValue(registration->GetLastTransformParameters());
 
