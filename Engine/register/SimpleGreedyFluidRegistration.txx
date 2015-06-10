@@ -372,9 +372,9 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
       warpf->SetInput(m_MovingImages[c]);
       warpf->SetEdgePaddingValue(0.0);
       warpf->SetDisplacementField(m_DisplacementField);
-      warpf->SetOutputDirection(m_DeformationField->GetDirection());
-      warpf->SetOutputOrigin(m_DeformationField->GetOrigin());
-      warpf->SetOutputSpacing(m_DeformationField->GetSpacing());
+      warpf->SetOutputDirection(m_DisplacementField->GetDirection());
+      warpf->SetOutputOrigin(m_DisplacementField->GetOrigin());
+      warpf->SetOutputSpacing(m_DisplacementField->GetSpacing());
       warpf->Update();
       m_OutputImages.Append(
         this->DownsampleImage(
@@ -440,9 +440,9 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
     warpf->SetInput(m_MovingImages[ichan]);
     warpf->SetEdgePaddingValue(0.0);
     warpf->SetDisplacementField(m_DisplacementField);
-    warpf->SetOutputDirection(m_DeformationField->GetDirection());
-    warpf->SetOutputOrigin(m_DeformationField->GetOrigin());
-    warpf->SetOutputSpacing(m_DeformationField->GetSpacing());
+    warpf->SetOutputDirection(m_DisplacementField->GetDirection());
+    warpf->SetOutputOrigin(m_DisplacementField->GetOrigin());
+    warpf->SetOutputSpacing(m_DisplacementField->GetSpacing());
     warpf->Update();
     m_OutputImages.Append(warpf->GetOutput());
   }
@@ -642,9 +642,9 @@ SimpleGreedyFluidRegistration<TPixel, Dimension>
     warpf->SetInput(m_DownMovingImages[ichan]);
     warpf->SetEdgePaddingValue(0.0);
     warpf->SetDisplacementField(m_DisplacementField);
-    warpf->SetOutputDirection(m_DeformationField->GetDirection());
-    warpf->SetOutputOrigin(m_DeformationField->GetOrigin());
-    warpf->SetOutputSpacing(m_DeformationField->GetSpacing());
+    warpf->SetOutputDirection(m_DisplacementField->GetDirection());
+    warpf->SetOutputOrigin(m_DisplacementField->GetOrigin());
+    warpf->SetOutputSpacing(m_DisplacementField->GetSpacing());
     warpf->Update();
     m_OutputImages.Append(warpf->GetOutput());
   }

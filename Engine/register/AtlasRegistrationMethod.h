@@ -112,7 +112,8 @@ public:
   ProbabilityImageList GetProbabilities();
   OutputImageList GetImages();
   OutputImagePointer GetAffineTemplate();
-
+ 
+  std::string m_AtlasFormat;
 // HACK
   void SetOtherTemplateFileName(std::string filename) { m_OtherTemplateFileName = filename; }
   OutputImagePointer GetOtherAffineTemplate() { return m_OtherAffineTemplate; }
@@ -152,6 +153,9 @@ public:
   void SetImageLinearTransformChoice(LinearTransformChoice c)
   { m_ImageLinearTransformChoice = c; }
 
+  void FastRegistrationOn() { m_FastRegistration = true; }
+  void FastRegistrationOff() { m_FastRegistration = false; }
+
 protected:
 
   AtlasRegistrationMethod();
@@ -176,7 +180,6 @@ private:
 
   std::string m_TemplateFileName;
 
-  std::string m_AtlasFormat;
 // HACK
   std::string m_OtherTemplateFileName;
 
@@ -213,6 +216,8 @@ private:
 
   LinearTransformChoice m_AtlasLinearTransformChoice;
   LinearTransformChoice m_ImageLinearTransformChoice;
+
+  bool m_FastRegistration;
 
 };
 

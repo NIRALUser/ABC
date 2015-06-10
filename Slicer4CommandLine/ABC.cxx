@@ -18,6 +18,8 @@
 #include "itkResampleImageFilter.h"
 #include "itkRescaleIntensityImageFilter.h"
 
+#include "itkMultiThreader.h"
+
 #include "DynArray.h"
 
 // Use manually instantiated classes for the big program chunks
@@ -39,6 +41,8 @@ int run_ABC(int argc, char** argv)
 {
 
   PARSE_ARGS;
+
+  itk::MultiThreader::SetGlobalDefaultNumberOfThreads( NumberOfThreads );
 
   typedef itk::Image<unsigned char, 3> ByteImageType;
   typedef itk::Image<float, 3> FloatImageType;
@@ -119,6 +123,9 @@ int run_ABC(int argc, char** argv)
       atlasreg->SetImageLinearTransformChoice(AtlasRegType::ID_TRANSFORM);
     if (coregMapType.compare("rigid") == 0)
       atlasreg->SetImageLinearTransformChoice(AtlasRegType::RIGID_TRANSFORM);
+
+    if (RegistrationMode.compare("Fine") == 0)
+      atlasreg->FastRegistrationOff();
 
     // Location of the priors (1.mha, 2.mha, ... 99.mha, ... etc)
     atlasreg->SetAtlasDirectory(atlasDir);

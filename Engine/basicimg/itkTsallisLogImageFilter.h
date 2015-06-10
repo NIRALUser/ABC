@@ -63,7 +63,9 @@ public:
 
     // Tsallis
     double q = 0.8;
-    double iq = 1 - q;
+    double iq = 1.0 - q;
+    if (iq == 0.0)
+      iq = 1e-10;
     double x = static_cast< double >( A );
     return static_cast< TOutput >( (pow(x, iq) - 1.0) / iq  );
   }

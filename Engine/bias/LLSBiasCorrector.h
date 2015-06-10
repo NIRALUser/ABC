@@ -78,7 +78,7 @@ public:
   typedef InternalImageType::RegionType InternalImageRegionType;
   typedef InternalImageType::SizeType InternalImageSizeType;
 
-  typedef double ScalarType;
+  typedef float ScalarType;
 
   typedef vnl_matrix<ScalarType> MatrixType;
   typedef vnl_vector<ScalarType> VectorType;
@@ -92,13 +92,13 @@ public:
   itkGetMacro(MaxDegree, unsigned int);
 
   // Spacing for determining voxels in LLS
-  void SetSampleSpacing(double s);
-  itkGetMacro(SampleSpacing, double);
+  void SetSampleSpacing(float s);
+  itkGetMacro(SampleSpacing, float);
 
   // Spacing for determining which voxels need to be updated
   // if correction is not done at full resolution
-  itkSetMacro(WorkingSpacing, double);
-  itkGetMacro(WorkingSpacing, double);
+  itkSetMacro(WorkingSpacing, float);
+  itkGetMacro(WorkingSpacing, float);
 
   itkSetMacro(ClampBias, bool);
   itkGetMacro(ClampBias, bool);
@@ -107,8 +107,8 @@ public:
   void SetMultiplicative() { m_DoLog = true; }
 
   // Bias field max magnitude
-  itkSetMacro(MaximumBiasMagnitude, double);
-  itkGetMacro(MaximumBiasMagnitude, double);
+  itkSetMacro(MaximumBiasMagnitude, float);
+  itkGetMacro(MaximumBiasMagnitude, float);
 
   void SetMask(MaskImageType* mask);
   void SetProbabilities(DynArray<ProbabilityImagePointer> probs);
@@ -121,8 +121,10 @@ public:
   // Default is 0
   itkSetMacro(ReferenceClassIndex, unsigned int);
   itkGetMacro(ReferenceClassIndex, unsigned int);
-  
 
+  static InternalImagePointer LogMap(InputImagePointer img);
+  static InternalImagePointer ExpMap(InputImagePointer img);
+  
   // Correct input images and write it to the designated output
   // fullRes flag selects whether to correct whole image or just grid points
   // defined by WorkingSpacing
@@ -130,6 +132,10 @@ public:
     DynArray<InputImagePointer>& inputs,
     DynArray<InputImagePointer>& outputs,
     bool fullRes=true);
+
+  // Obtain the bias fields after correction, must call CorrectImages() first
+  DynArray<InternalImagePointer> GetLogBiasFields()
+  { return m_LogBiasFields; }
 
 protected:
 
@@ -147,15 +153,17 @@ private:
 
   DynArray<ProbabilityImagePointer> m_Probabilities;
 
+  DynArray<InternalImagePointer> m_LogBiasFields;
+
   bool m_DoLog;
 
   unsigned int m_MaxDegree;
 
-  double m_SampleSpacing;
-  double m_WorkingSpacing;
+  float m_SampleSpacing;
+  float m_WorkingSpacing;
 
   bool m_ClampBias;
-  double m_MaximumBiasMagnitude;
+  float m_MaximumBiasMagnitude;
 
   MatrixType m_Means;
   DynArray<MatrixType> m_Covariances;
@@ -168,8 +176,8 @@ private:
 
   // Coordinate scaling and offset, computed from input probabilities
   // for preconditioning the polynomial basis equations
-  double m_XMu[3];
-  double m_XStd[3];
+  float m_XMu[3];
+  float m_XStd[3];
 
 };
 

@@ -1,6 +1,7 @@
 
 #include "EMSParameters.h"
 
+#include "itkMultiThreader.h"
 #include "itksys/SystemTools.hxx"
 
 EMSParameters
@@ -21,12 +22,12 @@ EMSParameters
   m_ImageOrientations.Clear();
 
   m_FilterMethod = "Curvature flow";
-  m_FilterIterations = 1;
+  m_FilterIterations = 0;
   m_FilterTimeStep = 0.01;
 
-  m_MaxBiasDegree = 4;
+  m_MaxBiasDegree = 2;
 
-  m_AtlasWarpFluidIterations = 10;
+  m_AtlasWarpFluidIterations = 0;
 
   m_AtlasWarpFluidMaxStep = 0.5;
 
@@ -37,10 +38,11 @@ EMSParameters
   m_AtlasLinearMapType = "affine";
   m_ImageLinearMapType = "affine";
 
-  m_InitialDistributionEstimator = "robust";
+  //m_InitialDistributionEstimator = "robust";
+  m_InitialDistributionEstimator = "standard";
 
-  m_NumberOfThreads = 4;
-  m_AtlasFormat = "mha" ; //In case the format is not specified, we use the old default format 
+  m_NumberOfThreads = itk::MultiThreader::GetGlobalMaximumNumberOfThreads();
+  m_AtlasFormat = "mha" ; //In case the format is not specified, we use the old default format
 }
 
 EMSParameters
@@ -86,6 +88,8 @@ EMSParameters
   if (itksys::SystemTools::Strucmp(m_OutputFormat.c_str(), "Nrrd") == 0)
     validFormat = true;
   if (itksys::SystemTools::Strucmp(m_OutputFormat.c_str(), "Meta") == 0)
+    validFormat = true;
+  if (itksys::SystemTools::Strucmp(m_OutputFormat.c_str(), "Nifti") == 0)
     validFormat = true;
 
   if (!validFormat)

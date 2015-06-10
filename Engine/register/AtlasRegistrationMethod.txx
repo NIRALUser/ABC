@@ -59,7 +59,7 @@ AtlasRegistrationMethod<TOutputPixel, TProbabilityPixel>
   m_AffineTransformReadFlags = FlagArrayType(1);
   m_AffineTransformReadFlags[0] = 0;
 
-  m_UseNonLinearInterpolation = true;
+  m_UseNonLinearInterpolation = false;
 
   m_OutsideFOVCode = vnl_huge_val(1.0f);
 
@@ -77,6 +77,7 @@ AtlasRegistrationMethod<TOutputPixel, TProbabilityPixel>
   m_AtlasLinearTransformChoice = AFFINE_TRANSFORM;
   m_ImageLinearTransformChoice = AFFINE_TRANSFORM;
 
+  m_FastRegistration = true;
 }
 
 template <class TOutputPixel, class TProbabilityPixel>
@@ -579,14 +580,28 @@ AtlasRegistrationMethod<TOutputPixel, TProbabilityPixel>
     muLogMacro(<< "Registering template to first image...\n");
 
     if (m_AtlasLinearTransformChoice == AFFINE_TRANSFORM)
-      m_TemplateAffineTransform =
-        PairRegistrationMethod<InternalImagePixelType>::
-          RegisterAffine(first, templateImg, PairRegType::QuantizeNone);
+    {
+      if (m_FastRegistration)
+        m_TemplateAffineTransform =
+          PairRegistrationMethod<InternalImagePixelType>::
+            RegisterAffineFast(first, templateImg, PairRegType::QuantizeNone);
+      else
+        m_TemplateAffineTransform =
+          PairRegistrationMethod<InternalImagePixelType>::
+            RegisterAffine(first, templateImg, PairRegType::QuantizeNone);
+    }
 
     if (m_AtlasLinearTransformChoice == RIGID_TRANSFORM)
-      m_TemplateAffineTransform =
-        PairRegistrationMethod<InternalImagePixelType>::
-          RegisterRigid(first, templateImg, PairRegType::QuantizeNone);
+    {
+      if (m_FastRegistration)
+        m_TemplateAffineTransform =
+          PairRegistrationMethod<InternalImagePixelType>::
+            RegisterRigidFast(first, templateImg, PairRegType::QuantizeNone);
+      else
+        m_TemplateAffineTransform =
+          PairRegistrationMethod<InternalImagePixelType>::
+            RegisterRigid(first, templateImg, PairRegType::QuantizeNone);
+    }
 
   }
 
@@ -608,14 +623,28 @@ AtlasRegistrationMethod<TOutputPixel, TProbabilityPixel>
     InternalImagePointer img_i = m_InputImages[i];
 
     if (m_ImageLinearTransformChoice == AFFINE_TRANSFORM)
-      m_AffineTransforms[i] = 
-        PairRegistrationMethod<InternalImagePixelType>::
-          RegisterAffine(first, img_i, PairRegType::QuantizeNone);
+    {
+      if (m_FastRegistration)
+        m_AffineTransforms[i] = 
+          PairRegistrationMethod<InternalImagePixelType>::
+            RegisterAffineFast(first, img_i, PairRegType::QuantizeNone);
+      else
+        m_AffineTransforms[i] = 
+          PairRegistrationMethod<InternalImagePixelType>::
+            RegisterAffine(first, img_i, PairRegType::QuantizeNone);
+    }
 
     if (m_ImageLinearTransformChoice == RIGID_TRANSFORM)
-      m_AffineTransforms[i] = 
-        PairRegistrationMethod<InternalImagePixelType>::
-          RegisterRigid(first, img_i, PairRegType::QuantizeNone);
+    {
+      if (m_FastRegistration)
+        m_AffineTransforms[i] = 
+          PairRegistrationMethod<InternalImagePixelType>::
+            RegisterRigidFast(first, img_i, PairRegType::QuantizeNone);
+      else
+        m_AffineTransforms[i] = 
+          PairRegistrationMethod<InternalImagePixelType>::
+            RegisterRigid(first, img_i, PairRegType::QuantizeNone);
+    }
 
   }
 
@@ -660,7 +689,7 @@ AtlasRegistrationMethod<TOutputPixel, TProbabilityPixel>
   // Spline interpolation, only available for input images, not atlas
   typename SplineInterpolatorType::Pointer splineInt =
     SplineInterpolatorType::New();
-  splineInt->SetSplineOrder(5);
+  splineInt->SetSplineOrder(3);
 
   // Resample the template
   if (m_TemplateFileName.length() != 0)

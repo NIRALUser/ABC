@@ -7,8 +7,8 @@
   ABC (Atlas Based Classification)
   </title>
   <description><![CDATA[@EXTENSION_DESCRIPTION@]]></description>
-  <version>1.4.0</version>
-  <contributor>Marcel Prastawa prastawa@sci.utah.edu</contributor>
+  <version>1.5.0</version>
+  <contributor>Marcel Prastawa marcel.prastawa@gmail.com</contributor>
   <documentation-url>
   http://www.nitrc.org/projects/abc
   </documentation-url>
@@ -141,8 +141,30 @@
       <label>Bias corrected output image 5</label>
       <channel>output</channel>
     </image>
-
   </parameters>
+
+<!-- --> 
+  <parameters>
+    <label>Speed</label>
+    <integer>
+    <name>NumberOfThreads</name>
+    <description>Number of threads</description>
+    <label>Number of threads:</label>
+    <longflag>numberOfThreads</longflag>
+    <default>8</default>
+    </integer>
+
+    <string-enumeration>
+      <name>RegistrationMode</name>
+      <description>Registration mode</description>
+      <label>Registration Mode:</label>
+      <longflag>registrationMode</longflag>
+      <element>Coarse</element>
+      <element>Fine</element>
+      <default>Coarse</default>
+    </string-enumeration>
+  </parameters>
+
 <!-- --> 
   <parameters advanced="true">
     <label>Advanced Parameters</label>
@@ -163,7 +185,7 @@
     <description>Filter iterations (0 = off)</description>
     <label>PreFiltering iterations (0 = off):</label>
     <longflag>filterIterations</longflag>
-    <default>1</default>
+    <default>0</default>
     </integer>
 
     <float>
@@ -179,7 +201,7 @@
     <flag>b</flag>
     <longflag>biasDegree</longflag>
     <label>Bias Field Polynomial Degree (0 = off):</label>
-    <default>4</default>
+    <default>2</default>
     </integer>
 
     <string-enumeration>
@@ -189,7 +211,7 @@
       <longflag>initialDistribEstim</longflag>
       <element>robust</element>
       <element>standard</element>
-      <default>robust</default>
+      <default>standard</default>
     </string-enumeration>
 
     <string-enumeration>
@@ -218,7 +240,7 @@
     <name>atlasFluidIters</name>
     <label>Atlas Warping Fluid Iterations (0 = off):</label>
     <longflag>atlasFluidIters</longflag>
-    <default>10</default>
+    <default>0</default>
     </integer>
 
     <float>

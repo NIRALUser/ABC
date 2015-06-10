@@ -16,6 +16,7 @@
 #include "itkRescaleIntensityImageFilter.h"
 
 #include "itkLBFGSBOptimizer.h"
+#include "itkRegularStepGradientDescentOptimizer.h"
 
 #include "vnl/vnl_math.h"
 
@@ -89,6 +90,16 @@ public:
         << "  Iter: " << descent->GetCurrentIteration() << " ||  "
         << "-MI: " << descent->GetValue() << "\n");
       muLogMacro(<< "  " << descent->GetCurrentPosition() << "\n");
+      return;
+    }
+    const itk::RegularStepGradientDescentOptimizer* regdescent =
+      dynamic_cast<const itk::RegularStepGradientDescentOptimizer*>(object);
+    if (regdescent != 0)
+    {
+      muLogMacro(
+        << "  Iter: " << regdescent->GetCurrentIteration() << " ||  "
+        << "-MI: " << regdescent->GetValue() << "\n");
+      muLogMacro(<< "  " << regdescent->GetCurrentPosition() << "\n");
       return;
     }
     const SimulatedAnnealingOptimizer* anneal =
@@ -504,6 +515,208 @@ PairRegistrationMethod<TPixel>
 template <class TPixel>
 PairRegistrationMethod<TPixel>::AffineTransformType::Pointer
 PairRegistrationMethod<TPixel>
+::RegisterAffineFast(ImageType* fixedImg, ImageType* movingImg,
+  QuantizationOption qopt)
+{
+  if (fixedImg == NULL || movingImg == NULL)
+    muExceptionMacro(<< "One of input images is NULL");
+
+  // Get image info
+  typename ImageType::SizeType fixedSize =
+    fixedImg->GetLargestPossibleRegion().GetSize();
+  typename ImageType::SizeType movingSize =
+    movingImg->GetLargestPossibleRegion().GetSize();
+
+  typename ImageType::PointType fixedOrigin = fixedImg->GetOrigin();
+  typename ImageType::PointType movingOrigin = movingImg->GetOrigin();
+
+  typename ImageType::SpacingType fixedSpacing = fixedImg->GetSpacing();
+  typename ImageType::SpacingType movingSpacing = movingImg->GetSpacing();
+
+  typename ImageType::IndexType fixedCenterIndex;
+  for (unsigned int dim = 0; dim < 3; dim++)
+    fixedCenterIndex[dim] = (fixedSize[dim]-1) / 2;
+  typename ImageType::IndexType movingCenterIndex;
+  for (unsigned int dim = 0; dim < 3; dim++)
+    movingCenterIndex[dim] = (movingSize[dim]-1) / 2;
+
+  AffineTransformType::CenterType fixedCenter;
+  fixedImg->TransformIndexToPhysicalPoint(fixedCenterIndex, fixedCenter);
+
+  AffineTransformType::CenterType movingCenter;
+  movingImg->TransformIndexToPhysicalPoint(movingCenterIndex, movingCenter);
+
+  // Adjust parameters relative to fixed image size
+  double minSpacing = fixedSpacing[0];
+  for (unsigned int dim = 1; dim < 3; dim++)
+    if (fixedSpacing[dim] < minSpacing)
+      minSpacing = fixedSpacing[dim];
+
+  // Define framework
+  typedef itk::LinearInterpolateImageFunction<
+    ImageType, double> InterpolatorType;
+  //typedef itk::MattesMutualInformationImageToImageMetric<
+  //  ImageType, ImageType> MetricType;
+  typedef NegativeMIImageMatchMetric<ImageType, ImageType> MetricType;    
+  
+  typedef itk::MultiResolutionImageRegistrationMethod<
+    ImageType, ImageType> RegistrationType;
+
+  typedef itk::RegularStepGradientDescentOptimizer OptimizerType;
+
+  // Create objects
+  typename InterpolatorType::Pointer interpolator = InterpolatorType::New();
+  typename RegistrationType::Pointer registration = RegistrationType::New();
+
+  typename MetricType::Pointer metric = MetricType::New();
+
+/*
+  typename OptimizerType::Pointer optimizer = OptimizerType::New();
+  optimizer->SetMinimumStepLength(1e-6);
+  optimizer->SetMaximumStepLength(1e-4);
+  optimizer->SetNumberOfIterations(50);
+*/
+
+  PowellOptimizer::Pointer powell = PowellOptimizer::New();
+
+  //registration->SetOptimizer(optimizer);
+  registration->SetOptimizer(powell);
+  registration->SetInterpolator(interpolator);
+  registration->SetMetric(metric);
+
+  interpolator->SetInputImage(movingImg);
+
+  // Initial affine transform (identity, centered at mid-image)
+  AffineTransformType::Pointer affine = AffineTransformType::New();
+  affine->SetSourceCenter(fixedCenter[0], fixedCenter[1], fixedCenter[2]);
+  affine->SetTargetCenter(movingCenter[0], movingCenter[1], movingCenter[2]);
+
+  registration->SetTransform(affine);
+  registration->SetInitialTransformParameters(affine->GetParameters());
+
+  registration->SetFixedImage(fixedImg);
+  registration->SetMovingImage(movingImg);
+  registration->SetFixedImageRegion(fixedImg->GetLargestPossibleRegion());
+
+  // Set steps for optimization
+  PowellOptimizer::ParametersType steps(12);
+  steps[0] = MU_AFFINE_STEP_TRANSLATE * minSpacing;
+  steps[1] = MU_AFFINE_STEP_TRANSLATE * minSpacing;
+  steps[2] = MU_AFFINE_STEP_TRANSLATE * minSpacing;
+  steps[3] = MU_AFFINE_STEP_ROTATE;
+  steps[4] = MU_AFFINE_STEP_ROTATE;
+  steps[5] = MU_AFFINE_STEP_ROTATE;
+  steps[6] = MU_AFFINE_STEP_SCALE;
+  steps[7] = MU_AFFINE_STEP_SCALE;
+  steps[8] = MU_AFFINE_STEP_SCALE;
+  steps[9] = MU_AFFINE_STEP_SKEW;
+  steps[10] = MU_AFFINE_STEP_SKEW;
+  steps[11] = MU_AFFINE_STEP_SKEW;
+
+  PowellOptimizer::OrderType order(12);
+  order[0] = MU_AFFINE_ORDER0;
+  order[1] = MU_AFFINE_ORDER1;
+  order[2] = MU_AFFINE_ORDER2;
+  order[3] = MU_AFFINE_ORDER3;
+  order[4] = MU_AFFINE_ORDER4;
+  order[5] = MU_AFFINE_ORDER5;
+  order[6] = MU_AFFINE_ORDER6;
+  order[7] = MU_AFFINE_ORDER7;
+  order[8] = MU_AFFINE_ORDER8;
+  order[9] = MU_AFFINE_ORDER9;
+  order[10] = MU_AFFINE_ORDER10;
+  order[11] = MU_AFFINE_ORDER11;
+
+  powell->SetInitialSteps(steps);
+  powell->SetOrder(order);
+  powell->SetMaximumIterations(10);
+  powell->SetBracketMaxStep(10.0);
+  powell->SetUseNewDirections(false);
+
+/*
+  amoeba->SetMaxIterations(300);
+  amoeba->SetInitialSimplexDeltas(steps);
+  amoeba->SetParameterTolerance(1e-3);
+  amoeba->SetFunctionTolerance(1e-3);
+
+  anneal->SetRandomWalkSteps(steps);
+  anneal->SetBurnInIterations(20);
+  anneal->SetMaxIterations(220);
+*/
+
+  metric->SetNumberOfBins(64);
+  metric->SetRandomSampling(true);
+
+  // Not needed for Havrda-Charvat
+  metric->SetNormalized(true);
+  if (qopt == QuantizeFixed || qopt == QuantizeBoth)
+    metric->QuantizeFixedImageOn();
+  else
+    metric->QuantizeFixedImageOff();
+  if (qopt == QuantizeMoving || qopt == QuantizeBoth)
+    metric->QuantizeMovingImageOn();
+  else
+    metric->QuantizeMovingImageOff();
+
+/*
+  // ITK's MI metric
+  metric->SetNumberOfHistogramBins(200);
+  unsigned int numSamples =
+    fixedImg->GetLargestPossibleRegion().GetNumberOfPixels() / 4;
+  if (numSamples > 5000000)
+    numSamples = 5000000;
+//TODO: need to be adjusted based on pyramid level??
+  metric->SetNumberOfSpatialSamples(numSamples);
+  metric->ReinitializeSeed( 76926294 );
+*/
+
+  // Create the Command observer and register it with the optimizers
+  powell->AddObserver(itk::IterationEvent(), AffineIterationUpdate::New());
+  //amoeba->AddObserver(itk::IterationEvent(), AffineIterationUpdate::New());
+  //anneal->AddObserver(itk::IterationEvent(), AffineIterationUpdate::New());
+  //optimizer->AddObserver(itk::IterationEvent(), AffineIterationUpdate::New());
+
+  // Create the Command interface observer and register it with the
+  // ITK registration wrapper
+  typedef AffineLevelUpdate<RegistrationType> LevelUpdaterType;
+  typename LevelUpdaterType::Pointer levelUpd = LevelUpdaterType::New();
+  registration->AddObserver(itk::IterationEvent(), levelUpd);
+
+  muLogMacro(<< "Beginning affine registration...\n");
+/*
+  // Use ITK framework to handle multi resolution registration
+  //metric->SetSampleSpacing(minSpacing);
+
+  //registration->SetOptimizer(amoeba);
+  //registration->SetOptimizer(powell);
+
+  registration->SetNumberOfLevels(2);
+  registration->Update();
+
+  affine->SetParameters(registration->GetLastTransformParameters());
+*/
+
+  metric->SetFixedImage(fixedImg);
+  metric->SetMovingImage(movingImg);
+  metric->SetTransform(affine);
+
+  muLogMacro(<< "Registering at [4x4x4]...\n");
+  metric->SetSampleSpacing(4.0*minSpacing);
+  powell->SetCostFunction(metric);
+  powell->SetInitialPosition(affine->GetParameters());
+  powell->SetMaximumIterations(8);
+  powell->StartOptimization();
+
+  affine->SetParameters(powell->GetCurrentPosition());
+
+  muLogMacro(<< "Done with affine registration\n");
+
+  return affine;
+}
+
+template <class TPixel>
+PairRegistrationMethod<TPixel>::AffineTransformType::Pointer
+PairRegistrationMethod<TPixel>
 ::RegisterRigid(ImageType* fixedImg, ImageType* movingImg,
   QuantizationOption qopt)
 {
@@ -511,6 +724,34 @@ PairRegistrationMethod<TPixel>
     muExceptionMacro(<< "One of input images is NULL");
 
   AffineTransformType::Pointer affine = RegisterAffine(fixedImg, movingImg, qopt);
+
+  AffineTransformType::ParametersType p = affine->GetParameters();
+
+  // Unit scale
+  p[6] = 1.0;
+  p[7] = 1.0;
+  p[8] = 1.0;
+
+  // Zero skew
+  p[9] = 0.0;
+  p[10] = 0.0;
+  p[11] = 0.0;
+
+  affine->SetParameters(p);
+
+  return affine;
+}
+
+template <class TPixel>
+PairRegistrationMethod<TPixel>::AffineTransformType::Pointer
+PairRegistrationMethod<TPixel>
+::RegisterRigidFast(ImageType* fixedImg, ImageType* movingImg,
+  QuantizationOption qopt)
+{
+  if (fixedImg == NULL || movingImg == NULL)
+    muExceptionMacro(<< "One of input images is NULL");
+
+  AffineTransformType::Pointer affine = RegisterAffineFast(fixedImg, movingImg, qopt);
 
   AffineTransformType::ParametersType p = affine->GetParameters();
 

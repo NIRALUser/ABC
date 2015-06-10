@@ -88,9 +88,9 @@ public:
   typedef itk::Image<VectorPixelType, 3> VectorFieldType;
   typedef typename VectorFieldType::Pointer VectorFieldPointer;
 
-  typedef vnl_vector<double> VectorType;
-  typedef vnl_matrix<double> MatrixType;
-  typedef vnl_matrix_inverse<double> MatrixInverseType;
+  typedef vnl_vector<float> VectorType;
+  typedef vnl_matrix<float> MatrixType;
+  typedef vnl_matrix_inverse<float> MatrixInverseType;
 
   typedef typename PairRegistrationMethod<InputImagePixelType>::
     BSplineTransformType::Pointer BSplineTransformPointer;
@@ -99,17 +99,17 @@ public:
   itkSetMacro(MaxBiasDegree, unsigned int);
   itkGetMacro(MaxBiasDegree, unsigned int);
 
-  itkSetMacro(BiasLikelihoodTolerance, double);
-  itkGetMacro(BiasLikelihoodTolerance, double);
+  itkSetMacro(BiasLikelihoodTolerance, float);
+  itkGetMacro(BiasLikelihoodTolerance, float);
 
-  itkSetMacro(LikelihoodTolerance, double);
-  itkGetMacro(LikelihoodTolerance, double);
+  itkSetMacro(LikelihoodTolerance, float);
+  itkGetMacro(LikelihoodTolerance, float);
 
   itkSetMacro(MaximumIterations, unsigned int);
   itkGetMacro(MaximumIterations, unsigned int);
 
-  itkSetMacro(SampleSpacing, double);
-  itkGetMacro(SampleSpacing, double);
+  itkSetMacro(SampleSpacing, float);
+  itkGetMacro(SampleSpacing, float);
 
   void SetInputImages(DynArray<InputImagePointer> data);
 
@@ -152,11 +152,11 @@ public:
   itkGetConstMacro(WarpFluidIterations, unsigned int);
   itkSetMacro(WarpFluidIterations, unsigned int);
 
-  itkGetConstMacro(WarpFluidMaxStep, double);
-  itkSetMacro(WarpFluidMaxStep, double);
+  itkGetConstMacro(WarpFluidMaxStep, float);
+  itkSetMacro(WarpFluidMaxStep, float);
 
-  itkGetConstMacro(WarpFluidKernelWidth, double);
-  itkSetMacro(WarpFluidKernelWidth, double);
+  itkGetConstMacro(WarpFluidKernelWidth, float);
+  itkSetMacro(WarpFluidKernelWidth, float);
 
   itkGetConstMacro(InitialDistributionEstimator, std::string);
   itkSetMacro(InitialDistributionEstimator, std::string);
@@ -167,6 +167,9 @@ protected:
   ~EMSegmentationFilter();
 
   void CheckInput();
+
+  void DownsampleInputs(float factor);
+  void UpsampleOutputs();
 
   void ComputeMask();
   void ComputePriorLookupTable();
@@ -180,9 +183,9 @@ protected:
   void ComputeDistributions();
   void ComputeDistributionsRobust(); // Same, but with robust mean
 
-  void ComputePosteriors(bool fullRes);
+  void ComputePosteriors();
 
-  void CorrectBias(unsigned int degree, bool fullRes);
+  void CorrectBias(unsigned int degree);
 
   void EMLoop();
 
@@ -196,12 +199,23 @@ protected:
   void ComputeAtlasWarpingFromProbabilities();
   void ComputeAtlasWarpingFromIntensities();
 
+  InputImagePointer DownsampleImage(InputImagePointer img, float factor);
+  InputImagePointer RestoreDownsampledImage(
+    InputImagePointer img, float defaultValue=0.0);
+
 private:
 
   DynArray<InputImagePointer> m_InputImages;
+  DynArray<InputImagePointer> m_OriginalInputImages;
+
   DynArray<InputImagePointer> m_CorrectedImages;
 
+  DynArray<InputImagePointer> m_LogBiasFields;
+
   DynArray<ProbabilityImagePointer> m_Priors;
+  DynArray<ProbabilityImagePointer> m_OriginalPriors;
+  DynArray<ProbabilityImagePointer> m_DownsampledOriginalPriors;
+
   DynArray<ProbabilityImagePointer> m_Likelihoods;
   DynArray<ProbabilityImagePointer> m_Posteriors;
 
@@ -211,11 +225,11 @@ private:
 
   bool m_InputModified;
 
-  double m_SampleSpacing;
+  float m_SampleSpacing;
 
   unsigned int m_MaxBiasDegree;
-  double m_BiasLikelihoodTolerance;
-  double m_LikelihoodTolerance;
+  float m_BiasLikelihoodTolerance;
+  float m_LikelihoodTolerance;
   unsigned m_MaximumIterations;
 
   VectorType m_PriorWeights;
@@ -235,8 +249,6 @@ private:
   InputImagePointer m_TemplateImage;
   InputImagePointer m_WarpedTemplateImage;
 
-  DynArray<ProbabilityImagePointer> m_OriginalPriors;
-
   ByteImagePointer m_OriginalMask;
 
   bool m_DoWarp;
@@ -248,11 +260,11 @@ private:
 
   unsigned int m_WarpFluidIterations;
 
-  double m_WarpFluidMaxStep;
+  float m_WarpFluidMaxStep;
 
-  double m_WarpFluidKernelWidth;
+  float m_WarpFluidKernelWidth;
 
-  double m_WarpLikelihoodTolerance;
+  float m_WarpLikelihoodTolerance;
 
   std::string m_InitialDistributionEstimator;
 };

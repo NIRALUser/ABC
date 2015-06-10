@@ -54,9 +54,17 @@ public:
     RegisterAffine(ImageType* fixedImg, ImageType* movingImg,
       QuantizationOption qopt=QuantizeNone);
 
+  static AffineTransformType::Pointer
+    RegisterAffineFast(ImageType* fixedImg, ImageType* movingImg,
+      QuantizationOption qopt=QuantizeNone);
+
   // Affine with unit scaling and zero skew
   static AffineTransformType::Pointer
     RegisterRigid(ImageType* fixedImg, ImageType* movingImg,
+      QuantizationOption qopt=QuantizeNone);
+
+  static AffineTransformType::Pointer
+    RegisterRigidFast(ImageType* fixedImg, ImageType* movingImg,
       QuantizationOption qopt=QuantizeNone);
 
   static BSplineTransformType::Pointer

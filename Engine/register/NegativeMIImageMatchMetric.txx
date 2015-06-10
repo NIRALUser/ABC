@@ -22,7 +22,7 @@
 template <class TImage, class TIndexImage>
 typename itk::SmartPointer<TIndexImage>
 _linearMapIntensityToHistogramIndex(
-  const TImage* img, unsigned int numBins, double sampleSpacing)
+  const TImage* img, unsigned int numBins, float sampleSpacing)
 {
   if (sampleSpacing < 0)
     std::cerr << "Negative sample spacing" << std::endl;
@@ -42,24 +42,24 @@ _linearMapIntensityToHistogramIndex(
   if (skips[2] == 0)
     skips[2] = 1;
 
-  double minv = vnl_huge_val(1.0);
-  double maxv = -vnl_huge_val(1.0);
+  float minv = vnl_huge_val(1.0f);
+  float maxv = -vnl_huge_val(1.0f);
 
   typename TImage::IndexType ind;
   for (ind[2] = 0; ind[2] < (long)size[2]; ind[2] += skips[2])
     for (ind[1] = 0; ind[1] < (long)size[1]; ind[1] += skips[1])
       for (ind[0] = 0; ind[0] < (long)size[0]; ind[0] += skips[0])
       {
-        double v = img->GetPixel(ind);
+        float v = img->GetPixel(ind);
         if (v < minv)
           minv = v;
         if (v > maxv)
           maxv = v;
       }
 
-  double rangev = maxv - minv;
+  float rangev = maxv - minv;
 
-  double t = 0.005 * rangev;
+  float t = 0.005 * rangev;
   minv += t;
   maxv -= t;
   rangev -= 2*t;
@@ -82,9 +82,9 @@ _linearMapIntensityToHistogramIndex(
 
   for (; !it.IsAtEnd(); ++it, ++mapIt)
   {
-    double v = it.Get();
+    float v = it.Get();
 
-    double u = (v - minv) / rangev;
+    float u = (v - minv) / rangev;
 
     unsigned int map = 0;
 
@@ -103,7 +103,7 @@ _linearMapIntensityToHistogramIndex(
 template <class TImage, class TIndexImage>
 typename itk::SmartPointer<TIndexImage>
 _kMeansMapIntensityToHistogramIndex(
-  const TImage* img, unsigned int numBins, double sampleSpacing)
+  const TImage* img, unsigned int numBins, float sampleSpacing)
 {
   typedef KMeansQuantizeImageFilter<TImage, TIndexImage>
     QuantizerType;
@@ -131,10 +131,9 @@ template <class TFixedImage, class TMovingImage>
 NegativeMIImageMatchMetric<TFixedImage, TMovingImage>
 ::NegativeMIImageMatchMetric()
 {
-  m_NumberOfBins = 255;
 
-  m_HistogramPointer = new HistogramType(m_NumberOfBins, m_NumberOfBins);
-  m_HistogramPointer->fill(0);
+  m_HistogramPointer = 0;
+  m_ThreadHistograms = 0;
 
   this->m_FixedImage = 0;
   this->m_MovingImage = 0;
@@ -154,8 +153,26 @@ NegativeMIImageMatchMetric<TFixedImage, TMovingImage>
 
   m_Normalized = false;
 
+  m_RandomSampling = false;
+
   m_DerivativeStepLengths = ParametersType(1);
   m_DerivativeStepLengths.Fill(1e-2);
+
+  m_ThreadHistograms = 0;
+
+  //m_NumberOfBins = 255;
+  this->SetNumberOfBins(255);
+
+  m_ThreadIndexCount = new int;
+}
+
+template <class TFixedImage, class TMovingImage>
+NegativeMIImageMatchMetric<TFixedImage, TMovingImage>
+::~NegativeMIImageMatchMetric()
+{
+  delete m_HistogramPointer;
+  delete [] m_ThreadHistograms;
+  delete m_ThreadIndexCount;
 }
 
 template <class TFixedImage, class TMovingImage>
@@ -205,12 +222,39 @@ NegativeMIImageMatchMetric<TFixedImage, TMovingImage>
 
   this->MapFixedImage();
 
+  m_ThreadIndices.clear();
+
+  FixedImageIndexType ind;
+  for (ind[2] = m_Skips[2]; ind[2] < (long)size[2]; ind[2] += m_Skips[2])
+    for (ind[1] = m_Skips[1]; ind[1] < (long)size[1]; ind[1] += m_Skips[1])
+      for (ind[0] = m_Skips[0]; ind[0] < (long)size[0]; ind[0] += m_Skips[0])
+      {
+        m_ThreadIndices.push_back(ind);
+      }
+
+  // Random selection of indices
+  if (m_RandomSampling)
+  {
+    unsigned int numIndices = m_ThreadIndices.size();
+
+    MersenneTwisterRNG* rng = MersenneTwisterRNG::GetGlobalInstance();
+
+    unsigned int* selection = rng->GenerateIntegerSequence(numIndices/2, numIndices-1);
+
+    std::vector<FixedImageIndexType> selectedIndices;
+    for (unsigned int i = 0; i < numIndices/2; i++)
+      selectedIndices.push_back(m_ThreadIndices[selection[i]]);
+
+    delete [] selection;
+
+    m_ThreadIndices = selectedIndices;
+  }
 }
 
 template <class TFixedImage, class TMovingImage>
 void
 NegativeMIImageMatchMetric<TFixedImage, TMovingImage>
-::SetSampleSpacing(double s)
+::SetSampleSpacing(float s)
 {
   m_SampleSpacing = s;
 
@@ -337,6 +381,18 @@ NegativeMIImageMatchMetric<TFixedImage, TMovingImage>
   this->MapFixedImage();
   this->MapMovingImage();
 
+  // Initialize thread histograms (use default number of threads)
+  int numThreads = itk::MultiThreader::GetGlobalDefaultNumberOfThreads();
+
+  delete [] m_ThreadHistograms;
+  m_ThreadHistograms = new HistogramType[numThreads];
+
+  for (unsigned int i = 0; i < numThreads; i++)
+  {
+    m_ThreadHistograms[i].set_size(m_NumberOfBins, m_NumberOfBins);
+    m_ThreadHistograms[i].fill(0);
+  }
+
   this->Modified();
 }
 
@@ -367,9 +423,9 @@ NegativeMIImageMatchMetric<TFixedImage, TMovingImage>
 
   FixedImageIndexType ind;
 
-  for (ind[2] = 0; ind[2] < (long)fixedSize[2]; ind[2] += m_Skips[2])
-    for (ind[1] = 0; ind[1] < (long)fixedSize[1]; ind[1] += m_Skips[1])
-      for (ind[0] = 0; ind[0] < (long)fixedSize[0]; ind[0] += m_Skips[0])
+  for (ind[2] = m_Skips[2]; ind[2] < (long)fixedSize[2]; ind[2] += m_Skips[2])
+    for (ind[1] = m_Skips[1]; ind[1] < (long)fixedSize[1]; ind[1] += m_Skips[1])
+      for (ind[0] = m_Skips[0]; ind[0] < (long)fixedSize[0]; ind[0] += m_Skips[0])
       {
         // Get sampled fixed image histogram index
         unsigned int r = m_FixedIndexImage->GetPixel(ind);
@@ -404,13 +460,13 @@ NegativeMIImageMatchMetric<TFixedImage, TMovingImage>
         int z1 = z0 + 1;
 
         // Get distances to the image grid
-        double fx = movingInd[0] - (double)x0;
-        double fy = movingInd[1] - (double)y0;
-        double fz = movingInd[2] - (double)z0;
+        float fx = movingInd[0] - (float)x0;
+        float fy = movingInd[1] - (float)y0;
+        float fz = movingInd[2] - (float)z0;
 
-        double gx = 1.0 - fx;
-        double gy = 1.0 - fy;
-        double gz = 1.0 - fz;
+        float gx = 1.0 - fx;
+        float gy = 1.0 - fy;
+        float gz = 1.0 - fz;
 
         // Moving image histogram index (column)
         unsigned int c = 0;
@@ -438,7 +494,7 @@ NegativeMIImageMatchMetric<TFixedImage, TMovingImage>
 // Linear interpolation
 // Note: Do not use linear interp with non-uniform spaced bins
 // Need to account for hist spacing h += area * 1
-        double c_interp = 0;
+        float c_interp = 0;
 
 #define interpWeightMacro(x, y, z, w) \
   if ((0 <= (x)) && ((x) < (long)movingSize[0]) && \
@@ -495,7 +551,7 @@ NegativeMIImageMatchMetric<TFixedImage, TMovingImage>
       }
 
   // Normalize histogram values
-  double sumHist = 0;
+  float sumHist = 0;
   for (unsigned int r = 0; r < m_NumberOfBins; r++)
     for (unsigned int c = 0; c < m_NumberOfBins; c++)
       sumHist += H(r, c);
@@ -505,12 +561,215 @@ NegativeMIImageMatchMetric<TFixedImage, TMovingImage>
 }
 
 template <class TFixedImage, class TMovingImage>
-double
+void
+NegativeMIImageMatchMetric<TFixedImage, TMovingImage>
+::ThreadedComputeHistogram() const
+{
+
+  itkDebugMacro(<< "ThreadedComputeHistogram");
+
+  *m_ThreadIndexCount = 0;
+
+  int numThreads = itk::MultiThreader::GetGlobalDefaultNumberOfThreads();
+
+  for (int i = 0; i < numThreads; i++)
+    m_ThreadHistograms[i].fill(0);
+
+  itk::MultiThreader::Pointer threader = itk::MultiThreader::New();
+
+  threader->SetNumberOfThreads(numThreads);
+  threader->SetSingleMethod(
+    &NegativeMIImageMatchMetric::_threadFillHistogram, (void*)this);
+  threader->SingleMethodExecute();
+
+  HistogramType& H = *m_HistogramPointer;
+  H.fill(0);
+
+  for (int i = 0; i < numThreads; i++)
+    H += m_ThreadHistograms[i];
+
+  // Normalize histogram values
+  float sumHist = 0;
+  for (unsigned int r = 0; r < m_NumberOfBins; r++)
+    for (unsigned int c = 0; c < m_NumberOfBins; c++)
+      sumHist += H(r, c);
+  if (sumHist != 0)
+    H /= sumHist;
+
+}
+
+template <class TFixedImage, class TMovingImage>
+ITK_THREAD_RETURN_TYPE
+NegativeMIImageMatchMetric<TFixedImage, TMovingImage>
+::_threadFillHistogram(void* arg)
+{
+  typedef itk::MultiThreader::ThreadInfoStruct ThreadInfoType;
+  ThreadInfoType * infoStruct = static_cast< ThreadInfoType * >( arg );
+
+  const unsigned int threadId = infoStruct->ThreadID;
+
+  NegativeMIImageMatchMetric* obj = static_cast< NegativeMIImageMatchMetric* >( infoStruct->UserData );
+
+  HistogramType& H = obj->m_ThreadHistograms[threadId];
+
+  FixedImagePointType fixedOrigin = obj->m_FixedIndexImage->GetOrigin();
+
+  FixedImageSpacingType fixedSpacing = obj->m_FixedIndexImage->GetSpacing();
+
+  FixedImageSizeType fixedSize =
+    obj->m_FixedIndexImage->GetLargestPossibleRegion().GetSize();
+
+  MovingImagePointType movingOrigin = obj->m_MovingIndexImage->GetOrigin();
+
+  MovingImageSpacingType movingSpacing = obj->m_MovingIndexImage->GetSpacing();
+
+  MovingImageSizeType movingSize =
+    obj->m_MovingIndexImage->GetLargestPossibleRegion().GetSize();
+
+  while (true)
+  {
+
+    obj->m_Mutex.Lock();
+    int pos = (*obj->m_ThreadIndexCount)++;
+    obj->m_Mutex.Unlock();
+
+    if (pos >= obj->m_ThreadIndices.size())
+      break;
+
+    FixedImageIndexType ind = obj->m_ThreadIndices[pos];
+
+    // Get sampled fixed image histogram index
+    unsigned int r = obj->m_FixedIndexImage->GetPixel(ind);
+
+    // Skip if fixed image histogram index is invalid
+    if (r >= obj->m_NumberOfBins)
+      continue;
+
+    FixedImagePointType fixedPoint;
+    obj->m_FixedImage->TransformIndexToPhysicalPoint(ind, fixedPoint);
+
+    MovingImagePointType mappedPoint =
+      obj->m_Transform->TransformPoint(fixedPoint);
+
+    // Use Partial Volume interpolation
+    
+    // Get continuous moving image coordinates (in voxels)
+    typedef itk::ContinuousIndex<double, 3> ContinuousIndexType;
+    ContinuousIndexType movingInd;
+    obj->m_MovingImage->TransformPhysicalPointToContinuousIndex(
+      mappedPoint, movingInd);
+
+    // Get image neighborhood
+    int x0 = (int)movingInd[0];
+    int y0 = (int)movingInd[1];
+    int z0 = (int)movingInd[2];
+
+    int x1 = x0 + 1;
+    int y1 = y0 + 1;
+    int z1 = z0 + 1;
+
+    // Get distances to the image grid
+    float fx = movingInd[0] - (float)x0;
+    float fy = movingInd[1] - (float)y0;
+    float fz = movingInd[2] - (float)z0;
+
+    float gx = 1.0 - fx;
+    float gy = 1.0 - fy;
+    float gz = 1.0 - fz;
+
+    // Moving image histogram index (column)
+    unsigned int c = 0;
+
+/*
+// Nearest-neighbor interp of quantized values
+    MovingImageIndexType nn_ind;
+    nn_ind[0] = (long)(movingInd[0] + 0.5);
+    nn_ind[1] = (long)(movingInd[1] + 0.5);
+    nn_ind[2] = (long)(movingInd[2] + 0.5);
+    if (nn_ind[0] < 0 || nn_ind[0] >= (long)movingSize[0]
+        ||
+        nn_ind[1] < 0 || nn_ind[1] >= (long)movingSize[1]
+        ||
+        nn_ind[2] < 0 || nn_ind[2] >= (long)movingSize[2])
+// PP: Add BG component???
+      continue;
+    c = obj->m_MovingIndexImage->GetPixel(nn_ind);
+    if (c >= obj->m_NumberOfBins)
+      continue;
+    H(r, c) += 1.0;
+*/
+
+/*
+// Linear interpolation
+// Note: Do not use linear interp with non-uniform spaced bins
+// Need to account for hist spacing h += area * 1
+        float c_interp = 0;
+
+#define interpWeightMacro(x, y, z, w) \
+  if ((0 <= (x)) && ((x) < (long)movingSize[0]) && \
+    (0 <= (y)) && ((y) < (long)movingSize[1]) && \
+    (0 <= (z)) && ((z) < (long)movingSize[2])) \
+  { \
+    MovingImageIndexType local_ind = {{(x), (y), (z)}}; \
+    c_interp += (w) * obj->m_MovingIndexImage->GetPixel(local_ind); \
+  }
+        interpWeightMacro(x0, y0, z0, gx*gy*gz);
+        interpWeightMacro(x0, y0, z1, gx*gy*fz);
+        interpWeightMacro(x0, y1, z0, gx*fy*gz);
+        interpWeightMacro(x0, y1, z1, gx*fy*fz);
+        interpWeightMacro(x1, y0, z0, fx*gy*gz);
+        interpWeightMacro(x1, y0, z1, fx*gy*fz);
+        interpWeightMacro(x1, y1, z0, fx*fy*gz);
+        interpWeightMacro(x1, y1, z1, fx*fy*fz);
+
+#undef interpWeightMacro
+
+        c = (unsigned int)(c_interp + 0.5);
+        if (c >= obj->m_NumberOfBins)
+          continue;
+
+        H(r, c) += 1.0;
+*/
+
+// PV interpolation
+// Macro for adding trilinear weights
+// Only add if inside moving image and moving index is valid
+#define partialVolumeWeightMacro(x, y, z, w) \
+  if ((0 <= (x)) && ((x) < (long)movingSize[0]) && \
+    (0 <= (y)) && ((y) < (long)movingSize[1]) && \
+    (0 <= (z)) && ((z) < (long)movingSize[2])) \
+  { \
+    MovingImageIndexType pvind = {{(x), (y), (z)}}; \
+    c = obj->m_MovingIndexImage->GetPixel(pvind); \
+    if (c < obj->m_NumberOfBins) \
+      H(r, c) += (w); \
+  }
+
+    // Fill histogram with trilinear weights
+    partialVolumeWeightMacro(x0, y0, z0, gx*gy*gz);
+    partialVolumeWeightMacro(x0, y0, z1, gx*gy*fz);
+    partialVolumeWeightMacro(x0, y1, z0, gx*fy*gz);
+    partialVolumeWeightMacro(x0, y1, z1, gx*fy*fz);
+    partialVolumeWeightMacro(x1, y0, z0, fx*gy*gz);
+    partialVolumeWeightMacro(x1, y0, z1, fx*gy*fz);
+    partialVolumeWeightMacro(x1, y1, z0, fx*fy*gz);
+    partialVolumeWeightMacro(x1, y1, z1, fx*fy*fz);
+
+#undef partialVolumeWeightMacro
+
+  }
+
+  return ITK_THREAD_RETURN_VALUE;
+}
+
+template <class TFixedImage, class TMovingImage>
+float
 NegativeMIImageMatchMetric<TFixedImage, TMovingImage>
 ::ComputeMI() const
 {
   // Compute histogram
-  this->ComputeHistogram();
+  //this->ComputeHistogram();
+  this->ThreadedComputeHistogram();
 
   itkDebugMacro(<< "Start MI");
 
@@ -518,7 +777,7 @@ NegativeMIImageMatchMetric<TFixedImage, TMovingImage>
 
 #if 1
   // ITK version
-  double totalf = 0.0;
+  float totalf = 0.0;
   for (unsigned c = 0; c < m_NumberOfBins; c++)
   {
     for (unsigned r = 0; r < m_NumberOfBins; r++)
@@ -531,43 +790,43 @@ NegativeMIImageMatchMetric<TFixedImage, TMovingImage>
   if (totalf <= 0.0)
     return 0;
 
-  double logtotalf = log(totalf);
+  float logtotalf = logf(totalf);
 
-  double entropyA = 0.0;
+  float entropyA = 0.0;
   for (unsigned r = 0; r < m_NumberOfBins; r++)
   {
-    double f = 0.0;
+    float f = 0.0;
     for (unsigned c = 0; c < m_NumberOfBins; c++)
     {
       f += H(r, c);
     }
     if (f > 0.0)
-      entropyA += f*log(f);
+      entropyA += f*logf(f);
   }
   // Negate sum and normalize histogram values
   entropyA = -entropyA / totalf + logtotalf;
 
-  double entropyB = 0.0;
+  float entropyB = 0.0;
   for (unsigned c = 0; c < m_NumberOfBins; c++)
   {
-    double f = 0.0;
+    float f = 0.0;
     for (unsigned r = 0; r < m_NumberOfBins; r++)
     {
       f += H(r, c);
     }
     if (f > 0.0)
-      entropyB += f*log(f);
+      entropyB += f*logf(f);
   }
   entropyB = -entropyB / totalf + logtotalf;
 
-  double jointEntropy = 0.0;
+  float jointEntropy = 0.0;
   for (unsigned c = 0; c < m_NumberOfBins; c++)
   {
     for (unsigned r = 0; r < m_NumberOfBins; r++)
     {
-      double f = H(r, c);
+      float f = H(r, c);
       if (f > 0.0)
-        jointEntropy += f*log(f);
+        jointEntropy += f*logf(f);
     }
   }
   jointEntropy = -jointEntropy / totalf + logtotalf;
@@ -595,40 +854,40 @@ NegativeMIImageMatchMetric<TFixedImage, TMovingImage>
     }
   }
 
-  double mi = 0;
+  float mi = 0;
   for (unsigned int i = 0; i < m_NumberOfBins; i++)
     for (unsigned int j = 0; j < m_NumberOfBins; j++)
     {
-      double p = H(i, j);
+      float p = H(i, j);
       if (p <= 0.0)
         continue;
-      double prodMarginals = marginalA(i, 0) * marginalB(j, 0);
+      float prodMarginals = marginalA(i, 0) * marginalB(j, 0);
       if (prodMarginals <= 0.0)
         continue;
-      mi += p * log(p / prodMarginals);
+      mi += p * logf(p / prodMarginals);
     }
 
   if (m_Normalized)
   {
-    double entropyA = 0;
+    float entropyA = 0;
     for (unsigned int i = 0; i < m_NumberOfBins; i++)
     {
-      double p = marginalA(i, 0);
+      float p = marginalA(i, 0);
       if (p <= 0.0)
         continue;
-      entropyA -= p * log(p);
+      entropyA -= p * logf(p);
     }
 
-    double entropyB = 0;
+    float entropyB = 0;
     for (unsigned int i = 0; i < m_NumberOfBins; i++)
     {
-      double p = marginalB(i, 0);
+      float p = marginalB(i, 0);
       if (p <= 0.0)
         continue;
-      entropyB -= p * log(p);
+      entropyB -= p * logf(p);
     }
 
-    double denom = (entropyA + entropyB);
+    float denom = (entropyA + entropyB);
     if (denom != 0.0)
       mi /= denom;
   }
@@ -683,11 +942,11 @@ NegativeMIImageMatchMetric<TFixedImage, TMovingImage>
   {
     ParametersType p1 = parameters;
     p1[i] -= m_DerivativeStepLengths[i];
-    double v1 = this->GetValue(p1);
+    float v1 = this->GetValue(p1);
 
     ParametersType p2 = parameters;
     p2[i] += m_DerivativeStepLengths[i];
-    double v2 = this->GetValue(p2);
+    float v2 = this->GetValue(p2);
 
     derivative[i] = (v2 - v1) / (2.0*m_DerivativeStepLengths[i]);
   }
@@ -717,7 +976,7 @@ NegativeMIImageMatchMetric<TFixedImage, TMovingImage>
   for (unsigned int i = 0; i < numParams; i++)
   {
     // Flip forward/backward only
-    double r = rng->GenerateUniformRealClosedInterval();
+    float r = rng->GenerateUniformRealClosedInterval();
     if (r >= 0.5)
       dp[i] = m_DerivativeStepLengths[i];
     else
@@ -725,7 +984,7 @@ NegativeMIImageMatchMetric<TFixedImage, TMovingImage>
 
 /*
     // r in [-1, 1]
-    double r = 2.0*rng->GenerateUniformRealClosedInterval() - 1.0;
+    float r = 2.0*rng->GenerateUniformRealClosedInterval() - 1.0;
     dp[i] = r*m_DerivativeStepLengths[i];
     if (fabs(dp[i]) < 1e-10)
       dp[i] = 1e-10;
@@ -741,10 +1000,10 @@ NegativeMIImageMatchMetric<TFixedImage, TMovingImage>
     p2[i] = parameters[i] - dp[i];
   }
 
-  double v1 = this->GetValue(p1);
-  double v2 = this->GetValue(p2);
+  float v1 = this->GetValue(p1);
+  float v2 = this->GetValue(p2);
 
-  double v_diff = v1 - v2;
+  float v_diff = v1 - v2;
 
   for (unsigned int i = 0; i < numParams; i++)
   {

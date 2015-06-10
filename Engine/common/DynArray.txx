@@ -126,7 +126,8 @@ DynArray<T>
 {
   if (m_Size == m_MaxSize)
   {
-    m_MaxSize = 2*m_MaxSize + 1;
+    //m_MaxSize = 2*m_MaxSize + 1;
+    m_MaxSize = m_MaxSize + 20;
     //T* newArray = new T[m_MaxSize];
     T* newArray = _DynArray_safeAlloc<T>(m_MaxSize);
     for (unsigned int i = 0; i < m_Size; i++)

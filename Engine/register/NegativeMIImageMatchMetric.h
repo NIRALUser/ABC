@@ -20,7 +20,12 @@
 #include "itkPoint.h"
 #include "itkSingleValuedCostFunction.h"
 
+#include "itkMultiThreader.h"
+#include "itkSimpleFastMutexLock.h"
+
 #include "vnl/vnl_matrix.h"
+
+#include <vector>
 
 template <class TFixedImage, class TMovingImage>
 class NegativeMIImageMatchMetric:
@@ -79,7 +84,7 @@ public:
   typedef IndexImageType::SizeType IndexImageSizeType;
   typedef IndexImageType::SpacingType IndexImageSpacingType;
 
-  typedef vnl_matrix<double> HistogramType;
+  typedef vnl_matrix<float> HistogramType;
 
   /** Enum of the moving image dimension. */
   itkStaticConstMacro(MovingImageDimension, unsigned int,
@@ -109,14 +114,18 @@ public:
   void QuantizeMovingImageOn() { m_QuantizeMoving = true; }
   void QuantizeMovingImageOff() { m_QuantizeMoving = false; }
 
-  itkGetConstMacro(SampleSpacing, double);
-  void SetSampleSpacing(double s);
+  itkGetConstMacro(SampleSpacing, float);
+  void SetSampleSpacing(float s);
 
   itkGetConstMacro(Normalized, bool);
   itkSetMacro(Normalized, bool);
 
-  itkGetConstMacro(KMeansSampleSpacing, double);
-  itkSetMacro(KMeansSampleSpacing, double);
+  // Random sampling for speed
+  itkGetConstMacro(RandomSampling, bool);
+  itkSetMacro(RandomSampling, bool);
+
+  itkGetConstMacro(KMeansSampleSpacing, float);
+  itkSetMacro(KMeansSampleSpacing, float);
 
   itkGetConstMacro(DerivativeStepLengths, ParametersType);
   itkSetMacro(DerivativeStepLengths, ParametersType);
@@ -130,15 +139,21 @@ public:
   }
 
 protected:
+
   NegativeMIImageMatchMetric();
-  virtual ~NegativeMIImageMatchMetric() { delete m_HistogramPointer; }
+  virtual ~NegativeMIImageMatchMetric();
+
   void PrintSelf(std::ostream& os, itk::Indent indent) const;
 
   void MapFixedImage();
   void MapMovingImage();
 
-  void ComputeHistogram() const;
-  double ComputeMI() const;
+  void ComputeHistogram() const; 
+
+  void ThreadedComputeHistogram() const;
+  static ITK_THREAD_RETURN_TYPE _threadFillHistogram(void* arg);
+
+  float ComputeMI() const;
 
 private:
   NegativeMIImageMatchMetric(const Self&); //purposely not implemented
@@ -152,8 +167,8 @@ private:
   bool m_QuantizeFixed;
   bool m_QuantizeMoving;
 
-  double m_KMeansSampleSpacing;
-  double m_SampleSpacing;
+  float m_KMeansSampleSpacing;
+  float m_SampleSpacing;
 
   unsigned int m_Skips[3];
 
@@ -162,6 +177,16 @@ private:
   bool m_Normalized;
 
   ParametersType m_DerivativeStepLengths;
+
+  bool m_RandomSampling;
+
+  itk::SimpleFastMutexLock m_Mutex;
+
+  HistogramType* m_ThreadHistograms;
+
+  int* m_ThreadIndexCount;
+
+  std::vector<FixedImageIndexType> m_ThreadIndices;
 
 };
 

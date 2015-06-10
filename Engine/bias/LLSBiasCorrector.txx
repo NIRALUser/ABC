@@ -2,30 +2,38 @@
 #ifndef _LLSBiasCorrector_txx
 #define _LLSBiasCorrector_txx
 
+#include "itkAddImageFilter.h"
+#include "itkDivideImageFilter.h"
+#include "itkMultiplyImageFilter.h"
+#include "itkSubtractImageFilter.h"
+
+#include "itkExpImageFilter.h"
+#include "itkLogImageFilter.h"
+
 #include "LLSBiasCorrector.h"
 
 #include "vnl/vnl_math.h"
 
-#include <float.h>
-#include <math.h>
+#include <cfloat>
+#include <cmath>
 
 #include <iostream>
 
 // Use the normal equation? Less accurate, but requires much less memory
 #define LLSBIAS_USE_NORMAL_EQUATION 1
 
-#define EXPP(x) (exp((x)/100.0) - 1.0)
-#define LOGP(x) (100.0 * log((x)+1.0))
-//#define EXPP(x) (exp(x) - 1)
-//#define LOGP(x) (log((x)+1))
+//#define EXPP(x) (expf((x)/100.0) - 1.0)
+//#define LOGP(x) (100.0 * logf((x)+1.0))
+#define EXPP(x) (expf(x) - 1)
+#define LOGP(x) (logf((x)+1))
 
 ////////////////////////////////////////////////////////////////////////////////
 
 static inline
-double
-mypow(double x, unsigned int n)
+float
+mypow(float x, unsigned int n)
 {
-  double p = 1.0;
+  float p = 1.0;
   for (unsigned int i = 0; i < n; i++)
     p *= x;
   return p;
@@ -118,6 +126,52 @@ LLSBiasCorrector <TInputImage, TProbabilityImage>
 }
 
 template <class TInputImage, class TProbabilityImage>
+typename LLSBiasCorrector <TInputImage, TProbabilityImage>::InternalImagePointer
+LLSBiasCorrector <TInputImage, TProbabilityImage>
+::LogMap(InputImagePointer img)
+{
+  typedef itk::AddImageFilter<InputImageType, InternalImageType, InternalImageType>
+    AddFilterType;
+
+  typename AddFilterType::Pointer addf = AddFilterType::New();
+  addf->SetInput1(img);
+  addf->SetConstant2(1.0);
+  addf->Update();
+
+  typedef itk::LogImageFilter<InternalImageType, InternalImageType>
+    LogFilterType;
+
+  typename LogFilterType::Pointer logf = LogFilterType::New();
+  logf->SetInput(addf->GetOutput());
+  logf->Update();
+
+  return logf->GetOutput();
+}
+
+template <class TInputImage, class TProbabilityImage>
+typename LLSBiasCorrector <TInputImage, TProbabilityImage>::InternalImagePointer
+LLSBiasCorrector <TInputImage, TProbabilityImage>
+::ExpMap(InputImagePointer img)
+{
+  typedef itk::ExpImageFilter<InternalImageType, InternalImageType>
+    ExpFilterType;
+
+  typename ExpFilterType::Pointer expf = ExpFilterType::New();
+  expf->SetInput(img);
+  expf->Update();
+
+  typedef itk::SubtractImageFilter<InputImageType, InternalImageType, InternalImageType>
+    SubtractFilterType;
+
+  typename SubtractFilterType::Pointer subf = SubtractFilterType::New();
+  subf->SetInput1(expf->GetOutput());
+  subf->SetConstant2(1.0);
+  subf->Update();
+
+  return subf->GetOutput();
+}
+
+template <class TInputImage, class TProbabilityImage>
 void
 LLSBiasCorrector <TInputImage, TProbabilityImage>
 ::ComputeLogDistributions()
@@ -125,13 +179,108 @@ LLSBiasCorrector <TInputImage, TProbabilityImage>
 
   itkDebugMacro(<< "LLSBiasCorrector: Computing means and variances of log(I)...");
 
+ typedef itk::AddImageFilter<ProbabilityImageType, ProbabilityImageType, ProbabilityImageType>
+    AddFilterType;
+  typedef itk::DivideImageFilter<ProbabilityImageType, ProbabilityImageType, ProbabilityImageType>
+    DivFilterType;
+  typedef itk::MultiplyImageFilter<ProbabilityImageType, InputImageType, ProbabilityImageType>
+    MulFilterType;
+  typedef itk::SubtractImageFilter<ProbabilityImageType, ProbabilityImageType, ProbabilityImageType>
+    SubFilterType;
+
   unsigned int numChannels = m_InputImages.GetSize();
   unsigned int numClasses = m_Probabilities.GetSize();
 
-  // Allocate
-  m_Means = MatrixType(numChannels, numClasses, 0.0);
-  m_Covariances.Clear();
+  // Log map intensties
+  DynArray<InputImagePointer> logInputImages;
+  for (unsigned int ichan = 0; ichan < numChannels; ichan++)
+    logInputImages.Append(this->LogMap(m_InputImages[ichan]));
 
+  typedef itk::StatisticsImageFilter<ProbabilityImageType> StatFilterType;
+
+  VectorType sumClassProb(numClasses);
+  for (unsigned iclass = 0; iclass < numClasses; iclass++)
+  {
+    typename StatFilterType::Pointer statf = StatFilterType::New();
+    statf->SetInput(m_Probabilities[iclass]);
+    statf->Update();
+    sumClassProb[iclass] = statf->GetSum() + 1e-20;
+  }
+
+  // Compute means of log intensities
+  m_Means = MatrixType(numChannels, numClasses, 0.0);
+
+  for (unsigned int iclass = 0; iclass < numClasses; iclass++)
+  {
+    for (unsigned int ichan = 0; ichan < numChannels; ichan++)
+    {
+      typename MulFilterType::Pointer mulf = MulFilterType::New();
+      mulf->SetInput1(m_Probabilities[iclass]);
+      mulf->SetInput2(logInputImages[ichan]);
+      mulf->Update();
+
+      typename StatFilterType::Pointer statIf = StatFilterType::New();
+      statIf->SetInput(mulf->GetOutput());
+      statIf->Update();
+
+      m_Means(ichan, iclass) = statIf->GetSum() / sumClassProb[iclass];
+    }
+  } // end means loop
+
+  // Compute covariances of log intensities
+  m_Covariances.Clear();
+  for (unsigned int iclass = 0; iclass < numClasses; iclass++)
+  {
+    MatrixType cov(numChannels, numChannels);
+
+    for (unsigned int r = 0; r < numChannels; r++)
+    {
+      typename SubFilterType::Pointer subf1 = SubFilterType::New();
+      subf1->SetInput1(logInputImages[r]);
+      subf1->SetConstant2(m_Means(r, iclass));
+      subf1->Update();
+
+      typename MulFilterType::Pointer pmulf = MulFilterType::New();
+      pmulf->SetInput1(m_Probabilities[iclass]);
+      pmulf->SetInput2(subf1->GetOutput());
+      pmulf->Update();
+
+      for (unsigned int c = r; c < numChannels; c++)
+      {
+        typename SubFilterType::Pointer subf2 = SubFilterType::New();
+        subf2->SetInput1(logInputImages[c]);
+        subf2->SetConstant2(m_Means(c, iclass));
+        subf2->Update();
+
+        typename MulFilterType::Pointer imulf = MulFilterType::New();
+        imulf->SetInput1(pmulf->GetOutput());
+        imulf->SetInput2(subf2->GetOutput());
+        imulf->GetOutput();
+
+        typename StatFilterType::Pointer statIf = StatFilterType::New();
+        statIf->SetInput(imulf->GetOutput());
+        statIf->Update();
+
+        float v = statIf->GetSum() / sumClassProb[iclass];
+
+       // Adjust diagonal, to make sure covariance is pos-def
+        if (r == c)
+          v += 1e-20;
+
+        // Assign value to the covariance matrix (symmetric)
+        cov(r, c) = v;
+        cov(c, r) = v;
+
+      }
+    }
+
+    m_Covariances.Append(cov);
+
+  } // end covariance loop
+
+
+// TODO DELETE
+/*
   InputImageSizeType size =
     m_Probabilities[0]->GetLargestPossibleRegion().GetSize();
 
@@ -157,8 +306,8 @@ LLSBiasCorrector <TInputImage, TProbabilityImage>
 
     for (unsigned int ichan = 0; ichan < numChannels; ichan++)
     {
-      double mu = 0;
-      double sumClassProb = DBL_EPSILON;
+      float mu = 0;
+      float sumClassProb = FLT_EPSILON;
 
       for (ind[2] = 0; ind[2] < (long)size[2]; ind[2] += skips[2])
         for (ind[1] = 0; ind[1] < (long)size[1]; ind[1] += skips[1])
@@ -188,22 +337,22 @@ LLSBiasCorrector <TInputImage, TProbabilityImage>
 
     for (unsigned int r = 0; r < numChannels; r++)
     {
-      double mu1 = m_Means(r, iclass);
+      float mu1 = m_Means(r, iclass);
 
       for (unsigned int c = r; c < numChannels; c++)
       {
-        double var = 0.0;
+        float var = 0.0;
 
-        double mu2 = m_Means(c, iclass);
+        float mu2 = m_Means(c, iclass);
 
-        double sumClassProb = DBL_EPSILON;
+        float sumClassProb = FLT_EPSILON;
 
         for (ind[2] = 0; ind[2] < (long)size[2]; ind[2] += skips[2])
           for (ind[1] = 0; ind[1] < (long)size[1]; ind[1] += skips[1])
             for (ind[0] = 0; ind[0] < (long)size[0]; ind[0] += skips[0])
             {
-              double diff1 = LOGP(m_InputImages[r]->GetPixel(ind)) - mu1;
-              double diff2 = LOGP(m_InputImages[c]->GetPixel(ind)) - mu2;
+              float diff1 = LOGP(m_InputImages[r]->GetPixel(ind)) - mu1;
+              float diff2 = LOGP(m_InputImages[c]->GetPixel(ind)) - mu2;
               var += m_Probabilities[iclass]->GetPixel(ind) * (diff1*diff2);
               sumClassProb += m_Probabilities[iclass]->GetPixel(ind);
             }
@@ -217,15 +366,14 @@ LLSBiasCorrector <TInputImage, TProbabilityImage>
         cov(c, r) = var;
 
       }
-
     }
-
 
     for (unsigned int ichan = 0; ichan < numChannels; ichan++)
       cov(ichan, ichan) += 1e-10;
 
     m_Covariances.Append(cov);
   }
+*/
 
   itkDebugMacro(<< "Means:" << std::endl << m_Means);
   itkDebugMacro(<< "Covariances:" << std::endl)
@@ -269,7 +417,7 @@ LLSBiasCorrector <TInputImage, TProbabilityImage>
 template <class TInputImage, class TProbabilityImage>
 void
 LLSBiasCorrector <TInputImage, TProbabilityImage>
-::SetSampleSpacing(double s)
+::SetSampleSpacing(float s)
 {
   itkDebugMacro(<< "SetSampleSpacing");
 
@@ -368,7 +516,7 @@ LLSBiasCorrector <TInputImage, TProbabilityImage>
         if (m_Mask->GetPixel(ind) == 0)
           continue;
 
-        double diff;
+        float diff;
 
         diff = ind[0] - m_XMu[0];
         m_XStd[0] += diff*diff;
@@ -387,7 +535,7 @@ LLSBiasCorrector <TInputImage, TProbabilityImage>
   m_XStd[2] = sqrt(m_XStd[2]);
 
   // Image coordinate values
-  double xc, yc, zc;
+  float xc, yc, zc;
 
   // Row and column indices
   unsigned int r;
@@ -568,7 +716,7 @@ LLSBiasCorrector <TInputImage, TProbabilityImage>
 #endif
 
   // Image coordinate values
-  double xc, yc, zc;
+  float xc, yc, zc;
 
   itkDebugMacro(<< "Fill rhs");
 
@@ -596,12 +744,12 @@ LLSBiasCorrector <TInputImage, TProbabilityImage>
               continue;
 
             // Compute reconstructed intensity, weighted by prob * invCov
-            double sumW = DBL_EPSILON;
-            double recon = 0;
+            float sumW = FLT_EPSILON;
+            float recon = 0;
             for (unsigned int iclass = 0; iclass < numClasses; iclass++)
             {
               MatrixType invCov = invCovars[iclass];
-              double w =
+              float w =
                 m_Probabilities[iclass]->GetPixel(ind)
                 *
                 invCov(ichan, jchan);
@@ -611,7 +759,7 @@ LLSBiasCorrector <TInputImage, TProbabilityImage>
 
             recon /= sumW;
 
-            double bias = LOGP(m_InputImages[jchan]->GetPixel(ind)) - recon;
+            float bias = LOGP(m_InputImages[jchan]->GetPixel(ind)) - recon;
             R_i(eq, 0) += sumW * bias;
 
             eq++;
@@ -655,11 +803,11 @@ LLSBiasCorrector <TInputImage, TProbabilityImage>
             if (m_Mask->GetPixel(ind) == 0)
               continue;
 
-            double sumW = DBL_EPSILON;
+            float sumW = DBL_EPSILON;
             for (unsigned int iclass = 0; iclass < numClasses; iclass++)
             {
               MatrixType invCov = invCovars[iclass];
-              double w =
+              float w =
                 m_Probabilities[iclass]->GetPixel(ind)
                 *
                 invCov(ichan, jchan);
@@ -717,8 +865,19 @@ LLSBiasCorrector <TInputImage, TProbabilityImage>
     workingofft[2] = 1;
   }
 
-  double logMax = LOGP(m_MaximumBiasMagnitude);
-  double logMin = -1.0 * logMax;
+  float logMax = LOGP(m_MaximumBiasMagnitude);
+  float logMin = -1.0 * logMax;
+
+
+// TODO: compute bias field multi thread
+// create index/coord image X, Y, Z
+// compute bias field using pow image filter
+// threshold to [logMin, logMax]
+// upsample
+// expp(logBias)
+// mul bias with input image
+
+  m_LogBiasFields.Clear();
 
   for (unsigned int ichan = 0; ichan < numChannels; ichan++)
   {
@@ -726,13 +885,14 @@ LLSBiasCorrector <TInputImage, TProbabilityImage>
     InputImagePointer output = outputs[ichan];
 
     // Compute the original mean intensity for ref class
-    double sumP = 1e-20;
-    double inputMu = 0;
+// TODO: ITK arith?
+    float sumP = 1e-20;
+    float inputMu = 0;
     for (ind[2] = 0; ind[2] < (long)size[2]; ind[2] += workingofft[2])
       for (ind[1] = 0; ind[1] < (long)size[1]; ind[1] += workingofft[1])
         for (ind[0] = 0; ind[0] < (long)size[0]; ind[0] += workingofft[0])
         {
-          double p = m_Probabilities[m_ReferenceClassIndex]->GetPixel(ind);
+          float p = m_Probabilities[m_ReferenceClassIndex]->GetPixel(ind);
           inputMu += p * input->GetPixel(ind);
           sumP += p;
         }
@@ -749,17 +909,17 @@ LLSBiasCorrector <TInputImage, TProbabilityImage>
     biasField->SetRegions(input->GetLargestPossibleRegion());
     biasField->Allocate();
 
-    double maxBias = 0.0;
-    double minBias = 0.0;
+    float maxBias = 0.0;
+    float minBias = 0.0;
 
-    double outputMu = 0;
+    float outputMu = 0;
 
     for (ind[2] = 0; ind[2] < (long)size[2]; ind[2] += workingofft[2])
       for (ind[1] = 0; ind[1] < (long)size[1]; ind[1] += workingofft[1])
         for (ind[0] = 0; ind[0] < (long)size[0]; ind[0] += workingofft[0])
         {
 
-          double fit = 0.0;
+          float fit = 0.0;
 
           unsigned int c = ichan*numCoefficients;
           for (unsigned int order = 0; order <= m_MaxDegree; order++)
@@ -772,7 +932,7 @@ LLSBiasCorrector <TInputImage, TProbabilityImage>
                 yc = (ind[1] - m_XMu[1]) / m_XStd[1];
                 zc = (ind[2] - m_XMu[2]) / m_XStd[2];
 
-                double poly =
+                float poly =
                   mypow(xc,xorder) * mypow(yc,yorder) * mypow(zc,zorder);
 
                 //fit += coeffs[c] * poly;
@@ -811,38 +971,43 @@ LLSBiasCorrector <TInputImage, TProbabilityImage>
       for (ind[1] = 0; ind[1] < (long)size[1]; ind[1] += workingofft[1])
         for (ind[0] = 0; ind[0] < (long)size[0]; ind[0] += workingofft[0])
         {
-          double logb = biasField->GetPixel(ind);
+          float logb = biasField->GetPixel(ind);
 
           if (logb > maxBias)
             logb = maxBias;
           if (logb < minBias)
             logb = minBias;
 
-          double logd = LOGP(m_InputImages[ichan]->GetPixel(ind)) - logb;
-          double d = EXPP(logd);
-          //double d = m_InputImages[ichan]->GetPixel(ind) / (logb + 1e-20);
+          float logd = LOGP(m_InputImages[ichan]->GetPixel(ind)) - logb;
+          float d = EXPP(logd);
+          //float d = m_InputImages[ichan]->GetPixel(ind) / (logb + 1e-20);
+
+          biasField->SetPixel(ind, logb);
+          //biasField->SetPixel(ind, EXPP(logb));
 
           if (vnl_math_isnan(d))
             d = 0.0;
           if (vnl_math_isinf(d))
             d = 0.0;
 
-          double p = m_Probabilities[m_ReferenceClassIndex]->GetPixel(ind);
+          float p = m_Probabilities[m_ReferenceClassIndex]->GetPixel(ind);
           outputMu += p * d;
 
           output->SetPixel(ind, (InputImagePixelType)d);
         } // for ind[0]
 
+    m_LogBiasFields.Append(biasField);
+
     outputMu /= sumP;
 
-    double resRatio = inputMu / (outputMu + 1e-20);
+    float resRatio = inputMu / (outputMu + 1e-20);
 
     // Rescale so output mean for ref class stays the same
     for (ind[2] = 0; ind[2] < (long)size[2]; ind[2] += workingofft[2])
       for (ind[1] = 0; ind[1] < (long)size[1]; ind[1] += workingofft[1])
         for (ind[0] = 0; ind[0] < (long)size[0]; ind[0] += workingofft[0])
         {
-          double v = output->GetPixel(ind);
+          float v = output->GetPixel(ind);
           output->SetPixel(ind, v * resRatio);
         }
 
