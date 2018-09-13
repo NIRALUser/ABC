@@ -919,11 +919,9 @@ PairRegistrationMethod<TPixel>
   btrafo->SetGridSpacing(gridSpacing);
   btrafo->SetGridRegion(bsplineRegion);
 
-  typedef BSplineTransformType::ParametersType ParametersType;
-
   unsigned int numParams = btrafo->GetNumberOfParameters();
 
-  ParametersType initp(numParams);
+  typename BSplineTransformType::FixedParametersType initp(numParams);
   initp.Fill(0.0);
 
   // Force assignment by value, otherwise will need to maintain p
@@ -1229,7 +1227,7 @@ PairRegistrationMethod<TPixel>
   // Read parameters
   unsigned int numParams = btrafo->GetNumberOfParameters();
 
-  BSplineTransformType::ParametersType p(numParams);
+  BSplineTransformType::FixedParametersType p(numParams);
   for (unsigned int i = 0; i < numParams; i++)
   {
     char s[PAIRREG_LINE_MAX];
@@ -1288,7 +1286,7 @@ PairRegistrationMethod<TPixel>
   }
 
   outfile << "# B-spline coefficients:" << std::endl;
-  BSplineTransformType::ParametersType p = btrafo->GetParameters();
+  BSplineTransformType::FixedParametersType p = btrafo->GetParameters();
   for (unsigned int i = 0; i < p.GetSize(); i++)
   {
     outfile << p[i] << std::endl;
