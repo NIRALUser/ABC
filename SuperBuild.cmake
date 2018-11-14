@@ -1,6 +1,5 @@
 include(${CMAKE_ROOT}/Modules/ExternalProject.cmake)
-
-set(PRIMARY_PROJECT_NAME auto_EACSF)
+set(PRIMARY_PROJECT_NAME ABC)
 
 option(USE_SYSTEM_ITK "Build using an externally defined version of ITK" OFF)
 
@@ -74,7 +73,10 @@ else()
 
 endif()
 
-set(proj ABC-inner)
+set(proj ${PRIMARY_PROJECT_NAME}-inner)
+set(${proj}_DEPENDENCIES ITK)
+
+#SlicerMacroCheckExternalProjectDependency(${proj})
 
 ExternalProject_Add(${proj}
   DOWNLOAD_COMMAND ""  
@@ -93,7 +95,5 @@ ExternalProject_Add(${proj}
     -DCOMPILE_SLICER4COMMANDLINE:BOOL=OFF
     ${CMAKE_OSX_EXTERNAL_PROJECT_ARGS}
   DEPENDS
-    ITK
+    ${${proj}_DEPENDENCIES}
 )
-
-  # SUBDIRS(StandAloneGUI)

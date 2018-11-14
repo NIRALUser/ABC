@@ -20,7 +20,7 @@ INCLUDE_DIRECTORIES(
   ${CMAKE_CURRENT_SOURCE_DIR}/../Engine/xmlio
 )
 
-SET(ABC_CLI_SRCS
+SET(ABC_CLI_SRCS 
   ../Engine/brainseg/EMSParameters.cxx
   ../Engine/brainseg/EMSegmentationFilter_float+float.cxx
   ../Engine/brainseg/runEMS.cxx
@@ -53,5 +53,5 @@ endif()
 ADD_EXECUTABLE(${TargetName} ${ABC_CLI_SRCS})
 TARGET_LINK_LIBRARIES(${TargetName} ${ITK_LIBRARIES})
 
-install(TARGETS ${TargetName} RUNTIME DESTINATION bin)
+install(TARGETS ${TargetName} RUNTIME DESTINATION ${INSTALL_RUNTIME_DESTINATION})
 

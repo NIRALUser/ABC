@@ -7,9 +7,8 @@ OPTION(COMPILE_BRAINSEG "Compile brainseg" OFF)
 OPTION(COMPILE_STANDALONEGUI "Compile StandAloneGUI" OFF)
 OPTION(COMPILE_COMMANDLINE "Compile CommandLine" OFF)
 
-
-if( ABC_SUPERBUILD )
-	include("${CMAKE_CURRENT_SOURCE_DIR}/SuperBuild.cmake")
+if( ${ABC_SUPERBUILD} )
+	include(${CMAKE_CURRENT_SOURCE_DIR}/SuperBuild.cmake)
 else()
 	include(${CMAKE_CURRENT_SOURCE_DIR}/ABC.cmake)
 endif()
