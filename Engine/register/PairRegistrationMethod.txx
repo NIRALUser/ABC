@@ -978,8 +978,11 @@ PairRegistrationMethod<TPixel>
   metric->ReinitializeSeed( 76926294 );
 
   registration->SetNumberOfLevels(1);
+#if ITK_VERSION_MAJOR < 4
+  registration->StartRegistration();
+#elif ITK_VERSION_MAJOR >= 4
   registration->Update();
-
+#endif
   btrafo->SetParametersByValue(registration->GetLastTransformParameters());
 
 #else
