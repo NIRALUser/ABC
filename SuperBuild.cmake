@@ -75,6 +75,8 @@ endif()
 
 set(proj ${PRIMARY_PROJECT_NAME}-inner)
 set(${proj}_DEPENDENCIES ITK)
+set(${proj}_INSTALL_PATH "${CMAKE_CURRENT_BINARY_DIR}/${proj}-install")
+set(INSTALL_RUNTIME_DESTINATION bin)
 
 ExternalProject_Add(${proj}
   DOWNLOAD_COMMAND ""  
@@ -87,6 +89,8 @@ ExternalProject_Add(${proj}
   ${cmakeversion_external_update} "${cmakeversion_external_update_value}"
   CMAKE_GENERATOR ${gen}
   CMAKE_ARGS
+    -DCMAKE_INSTALL_PREFIX:PATH=${${proj}_INSTALL_PATH}
+    -DINSTALL_RUNTIME_DESTINATION:PATH=${INSTALL_RUNTIME_DESTINATION}
     -DABC_SUPERBUILD:BOOL=OFF
     -DITK_DIR:PATH=${ITK_DIR}
     -DCOMPILE_SLICER4COMMANDLINE:BOOL=${COMPILE_SLICER4COMMANDLINE}
