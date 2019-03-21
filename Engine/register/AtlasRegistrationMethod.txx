@@ -20,6 +20,8 @@
 #include "itkCurvatureFlowImageFilter.h"
 #include "itkGradientAnisotropicDiffusionImageFilter.h"
 
+#include "itksys/SystemTools.hxx"
+
 #include "vnl/vnl_math.h"
 
 #include "LLSBiasCorrector.h"
@@ -333,6 +335,14 @@ AtlasRegistrationMethod<TOutputPixel, TProbabilityPixel>
   m_AtlasDirectory = dir;
 
   m_TemplateFileName = dir + std::string("template"+m_AtlasFormat);
+
+  if(!itksys::SystemTools::FileExists(m_TemplateFileName, true)){
+    m_TemplateFileName = dir + std::string("templateT1" + m_AtlasFormat);    
+    if(!itksys::SystemTools::FileExists(m_TemplateFileName, true)){
+      std::cerr<<"Template file does not exists... "<<m_TemplateFileName<<" "<<std::endl;
+    }
+  }
+  
 
   m_TemplateAffineTransform = AffineTransformType::New();
 
