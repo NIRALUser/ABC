@@ -2,6 +2,7 @@ include(${CMAKE_ROOT}/Modules/ExternalProject.cmake)
 set(PRIMARY_PROJECT_NAME ABC)
 
 option(USE_SYSTEM_ITK "Build using an externally defined version of ITK" OFF)
+OPTION( ABC_CLI_NO_SUFFIX "Name ABC_CLI ABC (no suffix)" OFF)
 
 set(proj ITK)
 
@@ -75,7 +76,9 @@ endif()
 
 set(proj ${PRIMARY_PROJECT_NAME}-inner)
 set(${proj}_DEPENDENCIES ITK)
-set(${proj}_INSTALL_PATH "${CMAKE_CURRENT_BINARY_DIR}/${proj}-install")
+if(NOT ${proj}_INSTALL_PATH)
+  set(${proj}_INSTALL_PATH "${CMAKE_CURRENT_BINARY_DIR}/${proj}-install")
+endif()
 set(INSTALL_RUNTIME_DESTINATION bin)
 
 ExternalProject_Add(${proj}
@@ -92,6 +95,7 @@ ExternalProject_Add(${proj}
     -DCMAKE_INSTALL_PREFIX:PATH=${${proj}_INSTALL_PATH}
     -DINSTALL_RUNTIME_DESTINATION:PATH=${INSTALL_RUNTIME_DESTINATION}
     -DABC_SUPERBUILD:BOOL=OFF
+    -DABC_CLI_NO_SUFFIX:BOOL=${ABC_CLI_NO_SUFFIX}
     -DITK_DIR:PATH=${ITK_DIR}
     -DCOMPILE_SLICER4COMMANDLINE:BOOL=${COMPILE_SLICER4COMMANDLINE}
     -DCOMPILE_BRAINSEG:BOOL=${COMPILE_BRAINSEG}
