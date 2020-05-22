@@ -32,7 +32,7 @@ if(NOT ( DEFINED "USE_SYSTEM_${proj}" AND "${USE_SYSTEM_${proj}}" ) )
       -DITK_WRAPPING:BOOL=OFF #${BUILD_SHARED_LIBS} ## HACK:  QUICK CHANGE
     )
   ### --- End Project specific additions
-  set(${proj}_REPOSITORY http://itk.org/ITK.git)
+  set(${proj}_REPOSITORY https://github.com/InsightSoftwareConsortium/ITK.git)
   set(${proj}_GIT_TAG "v4.8.2")
   set(ITK_VERSION_ID ITK-4.8)
 
