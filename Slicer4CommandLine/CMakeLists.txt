@@ -8,10 +8,12 @@ if(NOT Slicer_SOURCE_DIR)
   set(EXTENSION_CATEGORY "Segmentation")
   set(EXTENSION_CONTRIBUTORS "Marcel Prastawa (Utah)")
   set(EXTENSION_DESCRIPTION "Utah atlas based segmentation pipeline. Generates output images after bias correction and co-registration along with segmentation label image.")
-  set(EXTENSION_ACKNOWLEDGEMENTS "This work is part of the National Alliance for Medical Image Computing (NAMIC), funded by the National Institutes of Health through the NIH Roadmap for Medical Research, Grant U54 EB005149.")
-  set(EXTENSION_ICONURL "http://www.ucnia.org/software/projects/ABCLogo.png")
+  set(EXTENSION_ICONURL "https://github.com/NIRALUser/ABC/raw/master/ABC.png")
   set(EXTENSION_STATUS Beta)
 endif()
+
+# Used when configuring ABC.xml in SEMMacroBuildCLI
+set(EXTENSION_ACKNOWLEDGEMENTS "This work is part of the National Alliance for Medical Image Computing (NAMIC), funded by the National Institutes of Health through the NIH Roadmap for Medical Research, Grant U54 EB005149.")
 
 #-----------------------------------------------------------------------------
 set(MODULE_NAME ABC)

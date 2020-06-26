@@ -7,3 +7,7 @@ The processing pipeline includes image registration, filtering, segmentation and
 The image segmentation algorithm is based on the EMS software developed by Koen van Leemput.
 
 ![](ABC.png)
+
+## Acknowledgements
+
+This work is part of the National Alliance for Medical Image Computing (NAMIC), funded by the National Institutes of Health through the NIH Roadmap for Medical Research, Grant U54 EB005149.
